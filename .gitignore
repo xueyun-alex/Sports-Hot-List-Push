@@ -1,0 +1,6 @@
+data/*.db
+data/hotlist_report.txt
+__pycache__/
+*.pyc
+.venv/
+venv/
