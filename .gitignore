@@ -8,3 +8,6 @@ venv/
 .env.example
 .gitignore
 .cursor/plans
+build/
+dist/
+*.spec.bak

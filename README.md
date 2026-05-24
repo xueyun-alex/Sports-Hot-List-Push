@@ -25,12 +25,14 @@
 1. 在 [pushplus.plus](https://www.pushplus.plus) 注册并完成**实名认证**（未实名时接口返回 905，无法发送）。
 2. **个人中心 → 渠道配置 → 微信 ClawBot → 立即绑定**（扫码绑定）。
 3. 绑定后向 ClawBot **主动发一条消息**，点击「我已发送」，监听状态变为「已激活」。
-4. 复制用户 Token，设置环境变量（参考 [`.env.example`](.env.example)）：
+4. 复制用户 Token，在项目目录或 exe 同目录创建 `.env`（参考 [`.env.example`](.env.example)），或设置环境变量：
 
 ```powershell
 $env:PUSHPLUS_TOKEN="你的Token"
 $env:PUSHPLUS_CHANNEL="clawbot"
 ```
+
+程序启动时会自动读取同目录下的 `.env`（已存在的环境变量不会被覆盖）。
 
 5. 保持 `python main.py` 常驻（或配置 Windows 任务计划程序开机启动）。
 6. 每天 **08:30**、**18:30** 自动生成报告并推送当次报告正文到微信。
@@ -94,11 +96,34 @@ python main.py
 
 - **关闭窗口**：停止后台调度并退出程序
 
+## 打包为 exe
+
+将桌面应用打包为 Windows 单文件可执行程序（无需安装 Python）：
+
+```powershell
+.\build.ps1
+```
+
+产物位于 `dist/SportsHotList.exe`。将 exe 复制到任意目录即可运行，首次启动会自动在同目录创建 `data/`。
+
+**PushPlus 配置**（exe 模式）：在 exe 同目录放置 `.env` 文件，或设置系统环境变量。
+
+**开机自启**（exe 模式）：任务计划程序 → 启动程序 → 选择 `SportsHotList.exe` 完整路径。
+
+也可手动构建：
+
+```powershell
+pip install pyinstaller
+pyinstaller --noconfirm SportsHotList.spec
+```
+
 ## Windows 开机自启
 
 1. 打开「任务计划程序」
 2. 创建基本任务 → 触发器选「计算机启动时」或「登录时」
-3. 操作选「启动程序」：`python.exe`，参数填 `main.py` 完整路径，起始于项目目录
+3. 操作选「启动程序」：
+   - **源码运行**：`python.exe`，参数填 `main.py` 完整路径，起始于项目目录
+   - **exe 运行**：选择 `SportsHotList.exe` 完整路径
 
 也可使用 [NSSM](https://nssm.cc/) 将程序注册为 Windows 服务。
 
