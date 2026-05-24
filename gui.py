@@ -6,10 +6,10 @@ from datetime import datetime, timedelta
 from tkinter import ttk
 from typing import Callable, Dict, List, Optional, Tuple
 
-from config import PLATFORMS, POLL_INTERVAL_MINUTES
+from config import PLATFORMS, POLL_INTERVAL_MINUTES, RETENTION_DAYS
 from monitor import HotListMonitor
 from scraper import HotItem
-from storage import AppearanceRecord, Storage
+from storage import AppearanceRecord, CountResult, Storage
 from timezone_utils import get_tz
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,7 @@ PLATFORM_LAYOUT = [
 
 TIME_RANGE_OPTIONS = ("今天", "最近24小时", "最近7天", "全部")
 FETCH_LIMIT = 500
+COUNT_FETCH_LIMIT = 100
 
 
 def _platform_display_name(platform_key: str) -> str:
@@ -53,6 +54,21 @@ def _compute_time_range(option: str) -> Tuple[Optional[datetime], Optional[datet
     if option == "最近7天":
         return now - timedelta(days=7), now
     return None, None
+
+
+def _compute_count_time_range(option: str) -> Tuple[datetime, datetime]:
+    start, end = _compute_time_range(option)
+    tz = get_tz()
+    now = datetime.now(tz)
+    if start is None and end is None:
+        start = now - timedelta(days=RETENTION_DAYS)
+        return start, now
+    assert start is not None and end is not None
+    return start, end
+
+
+def _format_datetime(dt: datetime) -> str:
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
 class PlatformPanel(ttk.LabelFrame):
@@ -301,6 +317,203 @@ class HistoryPanel(ttk.Frame):
             self._on_select(str(values[3]))
 
 
+class CountPanel(ttk.Frame):
+    def __init__(
+        self,
+        master: tk.Misc,
+        storage: Storage,
+        on_select: Callable[[str], None],
+        on_loading: Callable[[bool], None],
+    ) -> None:
+        super().__init__(master, padding=(8, 4, 8, 4))
+        self.storage = storage
+        self._on_select = on_select
+        self._on_loading = on_loading
+        self._url_map: Dict[str, Optional[str]] = {}
+        self._loading = False
+        self._loaded_once = False
+
+        filter_bar = ttk.Frame(self)
+        filter_bar.pack(fill="x", pady=(0, 4))
+
+        ttk.Label(filter_bar, text="平台:", font=FONT_NORMAL).pack(side="left")
+        self.platform_var = tk.StringVar(value="全部")
+        platform_values = ["全部"] + [_platform_display_name(k) for k in PLATFORMS]
+        self.platform_combo = ttk.Combobox(
+            filter_bar,
+            textvariable=self.platform_var,
+            values=platform_values,
+            state="readonly",
+            width=16,
+        )
+        self.platform_combo.pack(side="left", padx=(4, 12))
+
+        ttk.Label(filter_bar, text="时间:", font=FONT_NORMAL).pack(side="left")
+        self.time_var = tk.StringVar(value="今天")
+        self.time_combo = ttk.Combobox(
+            filter_bar,
+            textvariable=self.time_var,
+            values=list(TIME_RANGE_OPTIONS),
+            state="readonly",
+            width=12,
+        )
+        self.time_combo.pack(side="left", padx=(4, 12))
+
+        self.query_btn = ttk.Button(filter_bar, text="查询", command=self.query)
+        self.query_btn.pack(side="left")
+
+        table_frame = ttk.Frame(self)
+        table_frame.pack(fill="both", expand=True)
+        table_frame.columnconfigure(0, weight=1)
+        table_frame.rowconfigure(0, weight=1)
+
+        self.tree = ttk.Treeview(
+            table_frame,
+            columns=("rank", "platform", "title", "count", "last_seen"),
+            show="headings",
+            selectmode="browse",
+        )
+        self.tree.heading("rank", text="#")
+        self.tree.heading("platform", text="平台")
+        self.tree.heading("title", text="标题")
+        self.tree.heading("count", text="次数")
+        self.tree.heading("last_seen", text="最后出现")
+        self.tree.column("rank", width=36, anchor="center", stretch=False)
+        self.tree.column("platform", width=110, anchor="w", stretch=False)
+        self.tree.column("title", width=320, anchor="w")
+        self.tree.column("count", width=48, anchor="center", stretch=False)
+        self.tree.column("last_seen", width=150, anchor="center", stretch=False)
+
+        scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+        self.tree.grid(row=0, column=0, sticky="nsew")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        self.tree.bind("<Double-1>", self._on_double_click)
+        self.tree.bind("<<TreeviewSelect>>", self._on_tree_select)
+
+        self.summary_var = tk.StringVar(value="")
+        ttk.Label(
+            self,
+            textvariable=self.summary_var,
+            font=FONT_STATUS,
+            anchor="w",
+        ).pack(fill="x", pady=(4, 0))
+
+    def on_tab_shown(self) -> None:
+        if not self._loaded_once:
+            self.query()
+
+    def _platform_key_from_display(self, display: str) -> Optional[str]:
+        if display == "全部":
+            return None
+        for key, info in PLATFORMS.items():
+            if info["name"] == display:
+                return key
+        return None
+
+    def query(self) -> None:
+        if self._loading:
+            return
+        self._loading = True
+        self._loaded_once = True
+        self.query_btn.configure(state="disabled")
+        self._on_loading(True)
+
+        platform_key = self._platform_key_from_display(self.platform_var.get())
+        start, end = _compute_count_time_range(self.time_var.get())
+
+        def worker() -> None:
+            try:
+                poll_count = self.storage.count_polls_in_window(start, end)
+                if platform_key is None:
+                    results = self.storage.count_global_in_window(
+                        start,
+                        end,
+                        limit=COUNT_FETCH_LIMIT,
+                    )
+                else:
+                    results = self.storage.count_in_window(
+                        start,
+                        end,
+                        platform_key=platform_key,
+                        limit=COUNT_FETCH_LIMIT,
+                    )
+                self.after(
+                    0,
+                    lambda: self._apply_results(results, start, end, poll_count),
+                )
+            except Exception:
+                logger.exception("Failed to load count statistics")
+                self.after(0, lambda: self._apply_error())
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _apply_results(
+        self,
+        results: List[CountResult],
+        start: datetime,
+        end: datetime,
+        poll_count: int,
+    ) -> None:
+        self.tree.delete(*self.tree.get_children())
+        self._url_map.clear()
+
+        for index, item in enumerate(results, start=1):
+            item_id = self.tree.insert(
+                "",
+                "end",
+                values=(
+                    index,
+                    _platform_display_name(item.platform),
+                    item.title,
+                    item.count,
+                    _format_polled_at(item.last_seen),
+                ),
+            )
+            self._url_map[item_id] = item.url
+
+        window_text = (
+            f"统计窗口: {_format_datetime(start)} ~ {_format_datetime(end)}"
+        )
+        poll_text = f"采集轮次: {poll_count} 次"
+        if not results:
+            self.summary_var.set(f"{window_text} | {poll_text} | 暂无数据")
+        else:
+            self.summary_var.set(
+                f"{window_text} | {poll_text} | 共 {len(results)} 条"
+            )
+
+        self._finish_loading()
+
+    def _apply_error(self) -> None:
+        self.tree.delete(*self.tree.get_children())
+        self._url_map.clear()
+        self.summary_var.set("加载失败，请重试")
+        self._finish_loading()
+
+    def _finish_loading(self) -> None:
+        self._loading = False
+        self.query_btn.configure(state="normal")
+        self._on_loading(False)
+
+    def _on_double_click(self, _event: tk.Event) -> None:
+        selection = self.tree.selection()
+        if not selection:
+            return
+        url = self._url_map.get(selection[0])
+        if url:
+            webbrowser.open(url)
+
+    def _on_tree_select(self, _event: tk.Event) -> None:
+        selection = self.tree.selection()
+        if not selection:
+            return
+        values = self.tree.item(selection[0], "values")
+        if len(values) >= 3:
+            self._on_select(str(values[2]))
+
+
 class HotListApp:
     def __init__(self) -> None:
         self.root = tk.Tk()
@@ -316,7 +529,7 @@ class HotListApp:
         style.configure("TLabelframe.Label", font=FONT_TITLE)
 
         self._polling = False
-        self._history_loading = False
+        self._panel_loading = False
         self._last_successful: Dict[str, List[HotItem]] = {}
         self.monitor = HotListMonitor(on_poll_complete=self._schedule_ui_update)
         self.history_storage = Storage()
@@ -330,8 +543,10 @@ class HotListApp:
 
         live_tab = ttk.Frame(self.notebook)
         history_tab = ttk.Frame(self.notebook)
+        counts_tab = ttk.Frame(self.notebook)
         self.notebook.add(live_tab, text="实时热榜")
         self.notebook.add(history_tab, text="历史记录")
+        self.notebook.add(counts_tab, text="热榜计数")
 
         toolbar = ttk.Frame(live_tab, padding=(8, 8, 8, 4))
         toolbar.pack(fill="x")
@@ -370,9 +585,21 @@ class HotListApp:
             history_tab,
             self.history_storage,
             on_select=self._show_title_in_status,
-            on_loading=self._set_history_loading,
+            on_loading=lambda loading: self._set_panel_loading(
+                loading, "正在加载历史记录..."
+            ),
         )
         self.history_panel.pack(fill="both", expand=True)
+
+        self.count_panel = CountPanel(
+            counts_tab,
+            self.history_storage,
+            on_select=self._show_title_in_status,
+            on_loading=lambda loading: self._set_panel_loading(
+                loading, "正在加载计数统计..."
+            ),
+        )
+        self.count_panel.pack(fill="both", expand=True)
 
         self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed)
 
@@ -388,13 +615,16 @@ class HotListApp:
         ).pack(fill="x")
 
     def _on_tab_changed(self, _event: tk.Event) -> None:
-        if self.notebook.index(self.notebook.select()) == 1:
+        tab_index = self.notebook.index(self.notebook.select())
+        if tab_index == 1:
             self.history_panel.on_tab_shown()
+        elif tab_index == 2:
+            self.count_panel.on_tab_shown()
 
-    def _set_history_loading(self, loading: bool) -> None:
-        self._history_loading = loading
+    def _set_panel_loading(self, loading: bool, message: str) -> None:
+        self._panel_loading = loading
         if loading:
-            self.status_var.set("状态：正在加载历史记录...")
+            self.status_var.set(f"状态：{message}")
         else:
             self._restore_live_status()
 
@@ -409,7 +639,7 @@ class HotListApp:
         )
 
     def _show_title_in_status(self, title: str) -> None:
-        if self._history_loading:
+        if self._panel_loading:
             return
         polled_at = getattr(self, "_last_polled_at", None)
         time_part = ""
@@ -447,7 +677,7 @@ class HotListApp:
 
         self.refresh_btn.configure(state="normal")
 
-        if self._history_loading:
+        if self._panel_loading:
             return
 
         time_str = polled_at.strftime("%Y-%m-%d %H:%M:%S")
