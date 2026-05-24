@@ -16,7 +16,43 @@
 - **18:30**：统计过去 10 小时（08:30 ~ 18:30），输出各平台 Top5 + 全站 Top5
 - **08:30**：统计过去 14 小时（昨日 18:30 ~ 08:30），输出各平台 Top5 + 全站 Top5
 
-报告追加写入 `data/hotlist_report.txt`。
+报告追加写入 `data/hotlist_report.txt`。若已配置 PushPlus，同一时间会将**本次刚生成的报告**推送到微信。
+
+## 手机推送（微信 ClawBot）
+
+通过 [PushPlus](https://www.pushplus.plus) 的 **微信 ClawBot** 渠道，将报告推送到微信。
+
+1. 在 [pushplus.plus](https://www.pushplus.plus) 注册并完成**实名认证**（未实名时接口返回 905，无法发送）。
+2. **个人中心 → 渠道配置 → 微信 ClawBot → 立即绑定**（扫码绑定）。
+3. 绑定后向 ClawBot **主动发一条消息**，点击「我已发送」，监听状态变为「已激活」。
+4. 复制用户 Token，设置环境变量（参考 [`.env.example`](.env.example)）：
+
+```powershell
+$env:PUSHPLUS_TOKEN="你的Token"
+$env:PUSHPLUS_CHANNEL="clawbot"
+```
+
+5. 保持 `python main.py` 常驻（或配置 Windows 任务计划程序开机启动）。
+6. 每天 **08:30**、**18:30** 自动生成报告并推送当次报告正文到微信。
+
+**ClawBot 使用限制**（[官方说明](https://pushplus.plus/doc/channel/clawbot.html)）：
+
+- 每推送 **10 条**后，需再主动发一条消息给 ClawBot
+- 每 **24 小时**内需至少主动对话一次，否则后续推送可能失败
+
+建议每天固定时间给 ClawBot 发一条消息保持激活。本项目每天 2 次推送，24 小时限制是主要注意点。
+
+未设置 `PUSHPLUS_TOKEN` 时仅写入 `data/hotlist_report.txt`，不影响采集与报告生成。
+
+### 推送联调
+
+生成测试报告后，用晚间报告内容试发一条推送：
+
+```bash
+python verify.py --push
+```
+
+需已设置 `PUSHPLUS_TOKEN`。
 
 ## 安装与运行
 

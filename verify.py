@@ -1,8 +1,10 @@
 """One-shot verification: poll once, generate both report types."""
 
+import argparse
 import logging
 import sys
 from datetime import datetime
+from typing import Tuple
 
 from config import DATA_DIR
 from reporter import generate_evening_report, generate_morning_report
@@ -42,7 +44,7 @@ def _seed_mock_data(storage: Storage, polled_at: datetime) -> None:
         storage.record_poll(key, mock_items, polled_at)
 
 
-def test_poll_and_report(use_live_fetch: bool = True) -> None:
+def test_poll_and_report(use_live_fetch: bool = True) -> Tuple[str, str]:
     test_db = DATA_DIR / "test_records.db"
     test_report = DATA_DIR / "test_hotlist_report.txt"
 
@@ -82,12 +84,32 @@ def test_poll_and_report(use_live_fetch: bool = True) -> None:
 
     logger.info("Report file written to %s (%d bytes)", test_report, len(content))
     logger.info("Database at %s", test_db)
+    return evening, morning
+
+
+def test_push(evening_report: str) -> None:
+    from pushplus import build_push_title, send_report
+
+    title = build_push_title("晚间报告 (18:30)", evening_report)
+    if not send_report(title, evening_report):
+        raise RuntimeError("PushPlus push failed")
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Verify hotlist monitor")
+    parser.add_argument(
+        "--push",
+        action="store_true",
+        help="After verification, send evening report via PushPlus",
+    )
+    args = parser.parse_args()
+
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     test_window_logic()
-    test_poll_and_report(use_live_fetch=True)
+    evening, _morning = test_poll_and_report(use_live_fetch=True)
+    if args.push:
+        test_push(evening)
+        logger.info("PushPlus test push sent")
     logger.info("All verification checks passed")
     return 0
 

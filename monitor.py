@@ -9,6 +9,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from config import DATA_DIR, PLATFORMS, POLL_INTERVAL_MINUTES, TIMEZONE, USER_AGENT
+from pushplus import build_push_title, send_report
 from reporter import generate_evening_report, generate_morning_report
 from scraper import HotItem, fetch_all_platforms
 from storage import Storage
@@ -64,11 +65,15 @@ class HotListMonitor:
         logger.info("Generating evening report")
         content = generate_evening_report(self.storage)
         logger.info("Evening report written (%d chars)", len(content))
+        title = build_push_title("晚间报告 (18:30)", content)
+        send_report(title, content, session=self.session)
 
     def run_morning_report(self) -> None:
         logger.info("Generating morning report")
         content = generate_morning_report(self.storage)
         logger.info("Morning report written (%d chars)", len(content))
+        title = build_push_title("晨间报告 (08:30)", content)
+        send_report(title, content, session=self.session)
 
     def start(self) -> None:
         DATA_DIR.mkdir(parents=True, exist_ok=True)

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -36,3 +37,16 @@ USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/120.0.0.0 Safari/537.36"
 )
+
+PUSHPLUS_TOKEN = os.getenv("PUSHPLUS_TOKEN", "").strip()
+PUSHPLUS_CHANNEL = os.getenv("PUSHPLUS_CHANNEL", "clawbot").strip()
+PUSHPLUS_API_URL = os.getenv(
+    "PUSHPLUS_API_URL", "https://www.pushplus.plus/send"
+).strip()
+_enabled = os.getenv("PUSHPLUS_ENABLED", "").strip().lower()
+if _enabled in ("0", "false", "no"):
+    PUSHPLUS_ENABLED = False
+elif _enabled in ("1", "true", "yes"):
+    PUSHPLUS_ENABLED = True
+else:
+    PUSHPLUS_ENABLED = bool(PUSHPLUS_TOKEN)
