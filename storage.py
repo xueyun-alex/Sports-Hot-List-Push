@@ -32,6 +32,16 @@ class CountResult:
     last_seen: str
 
 
+@dataclass
+class AppearanceRecord:
+    id: int
+    platform: str
+    title: str
+    url: Optional[str]
+    rank: Optional[int]
+    polled_at: str
+
+
 class Storage:
     def __init__(self, db_path: Path = DB_PATH):
         self.db_path = db_path
@@ -145,6 +155,73 @@ class Storage:
             )
             for row in rows
         ]
+
+    def _appearance_filters(
+        self,
+        start: Optional[datetime],
+        end: Optional[datetime],
+        platform_key: Optional[str],
+    ) -> Tuple[str, List]:
+        conditions: List[str] = []
+        params: List = []
+        if start is not None:
+            conditions.append("polled_at >= ?")
+            params.append(start.isoformat())
+        if end is not None:
+            conditions.append("polled_at <= ?")
+            params.append(end.isoformat())
+        if platform_key:
+            conditions.append("platform = ?")
+            params.append(platform_key)
+        where = " AND ".join(conditions) if conditions else "1=1"
+        return where, params
+
+    def fetch_appearances(
+        self,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        platform_key: Optional[str] = None,
+        limit: int = 500,
+        offset: int = 0,
+    ) -> List[AppearanceRecord]:
+        where, params = self._appearance_filters(start, end, platform_key)
+        query = f"""
+            SELECT id, platform, title, url, rank, polled_at
+            FROM appearances
+            WHERE {where}
+            ORDER BY polled_at DESC, id DESC
+            LIMIT ? OFFSET ?
+        """
+        params.extend([int(limit), int(offset)])
+
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+
+        return [
+            AppearanceRecord(
+                id=row["id"],
+                platform=row["platform"],
+                title=row["title"],
+                url=row["url"],
+                rank=row["rank"],
+                polled_at=row["polled_at"],
+            )
+            for row in rows
+        ]
+
+    def count_appearances(
+        self,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        platform_key: Optional[str] = None,
+    ) -> int:
+        where, params = self._appearance_filters(start, end, platform_key)
+        with self._connect() as conn:
+            row = conn.execute(
+                f"SELECT COUNT(*) AS total FROM appearances WHERE {where}",
+                params,
+            ).fetchone()
+        return int(row["total"]) if row else 0
 
     def count_polls_in_window(self, start: datetime, end: datetime) -> int:
         with self._connect() as conn:
