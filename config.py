@@ -66,9 +66,18 @@ USER_AGENT = (
 )
 
 PUSHPLUS_TOKEN = os.getenv("PUSHPLUS_TOKEN", "").strip()
+PUSHPLUS_SECRET_KEY = os.getenv("PUSHPLUS_SECRET_KEY", "").strip()
 PUSHPLUS_CHANNEL = os.getenv("PUSHPLUS_CHANNEL", "clawbot").strip()
 PUSHPLUS_API_URL = os.getenv(
     "PUSHPLUS_API_URL", "https://www.pushplus.plus/send"
+).strip()
+PUSHPLUS_ACCESS_KEY_URL = os.getenv(
+    "PUSHPLUS_ACCESS_KEY_URL",
+    "https://www.pushplus.plus/api/common/openApi/getAccessKey",
+).strip()
+PUSHPLUS_SEND_RESULT_URL = os.getenv(
+    "PUSHPLUS_SEND_RESULT_URL",
+    "https://www.pushplus.plus/api/open/message/sendMessageResult",
 ).strip()
 _enabled = os.getenv("PUSHPLUS_ENABLED", "").strip().lower()
 if _enabled in ("0", "false", "no"):
@@ -77,3 +86,24 @@ elif _enabled in ("1", "true", "yes"):
     PUSHPLUS_ENABLED = True
 else:
     PUSHPLUS_ENABLED = bool(PUSHPLUS_TOKEN)
+
+_verify = os.getenv("PUSHPLUS_VERIFY_ENABLED", "").strip().lower()
+if _verify in ("0", "false", "no"):
+    PUSHPLUS_VERIFY_ENABLED = False
+elif _verify in ("1", "true", "yes"):
+    PUSHPLUS_VERIFY_ENABLED = True
+else:
+    PUSHPLUS_VERIFY_ENABLED = bool(PUSHPLUS_SECRET_KEY)
+
+PUSHPLUS_PUSH_MAX_RETRIES = max(
+    1, int(os.getenv("PUSHPLUS_PUSH_MAX_RETRIES", "3"))
+)
+PUSHPLUS_VERIFY_POLL_INTERVAL = max(
+    1, int(os.getenv("PUSHPLUS_VERIFY_POLL_INTERVAL", "5"))
+)
+PUSHPLUS_VERIFY_TIMEOUT = max(
+    10, int(os.getenv("PUSHPLUS_VERIFY_TIMEOUT", "90"))
+)
+PUSHPLUS_RETRY_DELAY = max(
+    1, int(os.getenv("PUSHPLUS_RETRY_DELAY", "10"))
+)

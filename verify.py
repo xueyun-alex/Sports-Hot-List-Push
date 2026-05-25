@@ -91,7 +91,7 @@ def test_push(evening_report: str) -> None:
     from pushplus import build_push_title, send_report
 
     title = build_push_title("晚间报告 (18:30)", evening_report)
-    if not send_report(title, evening_report):
+    if send_report(title, evening_report) is None:
         raise RuntimeError("PushPlus push failed")
 
 

@@ -6,8 +6,9 @@ from datetime import datetime, timedelta
 from tkinter import ttk
 from typing import Callable, Dict, List, Optional, Tuple
 
-from config import PLATFORMS, POLL_INTERVAL_MINUTES, RETENTION_DAYS
+from config import PLATFORMS, POLL_INTERVAL_MINUTES, PUSHPLUS_ENABLED, RETENTION_DAYS
 from monitor import HotListMonitor
+from pushplus import send_test_message
 from scraper import HotItem
 from storage import AppearanceRecord, CountResult, Storage
 from timezone_utils import get_tz
@@ -529,6 +530,7 @@ class HotListApp:
         style.configure("TLabelframe.Label", font=FONT_TITLE)
 
         self._polling = False
+        self._push_testing = False
         self._panel_loading = False
         self._last_successful: Dict[str, List[HotItem]] = {}
         self.monitor = HotListMonitor(on_poll_complete=self._schedule_ui_update)
@@ -552,6 +554,13 @@ class HotListApp:
         toolbar.pack(fill="x")
 
         ttk.Label(toolbar, text="体育热榜监控", font=FONT_TITLE).pack(side="left")
+
+        self.push_test_btn = ttk.Button(
+            toolbar,
+            text="推送测试",
+            command=self._test_push,
+        )
+        self.push_test_btn.pack(side="right", padx=(0, 4))
 
         self.refresh_btn = ttk.Button(
             toolbar,
@@ -701,6 +710,33 @@ class HotListApp:
             return
         self._set_polling_status()
         threading.Thread(target=self.monitor.poll_once, daemon=True).start()
+
+    def _test_push(self) -> None:
+        if self._push_testing:
+            return
+        if not PUSHPLUS_ENABLED:
+            self.status_var.set("状态：未配置 PUSHPLUS_TOKEN，无法推送测试")
+            return
+
+        self._push_testing = True
+        self.push_test_btn.configure(state="disabled")
+        self.status_var.set("状态：正在发送测试消息...")
+
+        def worker() -> None:
+            ok = send_test_message()
+            self.root.after(0, lambda: self._finish_push_test(ok))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _finish_push_test(self, ok: bool) -> None:
+        self._push_testing = False
+        self.push_test_btn.configure(state="normal")
+        if ok:
+            self.status_var.set("状态：测试消息已发送到微信")
+        else:
+            self.status_var.set(
+                "状态：测试消息发送失败，请检查 Token 与 ClawBot 授权"
+            )
 
     def _on_close(self) -> None:
         self.monitor.stop()

@@ -29,8 +29,23 @@
 
 ```powershell
 $env:PUSHPLUS_TOKEN="你的Token"
+$env:PUSHPLUS_SECRET_KEY="你的SecretKey"
 $env:PUSHPLUS_CHANNEL="clawbot"
 ```
+
+**SecretKey** 用于查询消息投递状态（个人中心 → 开放接口 → 用户密钥）。配置后，08:30 / 18:30 定时推送会轮询 PushPlus 确认微信已收到；若未送达则自动重发（默认最多 3 次）。
+
+可选环境变量：
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `PUSHPLUS_VERIFY_ENABLED` | 有 SecretKey 时为 true | 设为 `0` 可关闭投递验证，仅重试 API 提交失败 |
+| `PUSHPLUS_PUSH_MAX_RETRIES` | `3` | 单次报告最多发送次数 |
+| `PUSHPLUS_VERIFY_POLL_INTERVAL` | `5` | 轮询间隔（秒） |
+| `PUSHPLUS_VERIFY_TIMEOUT` | `90` | 单次发送后轮询最长等待（秒） |
+| `PUSHPLUS_RETRY_DELAY` | `10` | 重发前等待（秒） |
+
+投递状态 `status=2` 表示 PushPlus 已成功投递到 ClawBot/微信，不代表用户已阅读消息。若账号启用了开放接口 IP 白名单，需将运行机器 IP 加入白名单。
 
 程序启动时会自动读取同目录下的 `.env`（已存在的环境变量不会被覆盖）。
 
