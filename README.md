@@ -54,6 +54,7 @@ $env:PUSHPLUS_CHANNEL="clawbot"
 
 **ClawBot 使用限制**（[官方说明](https://pushplus.plus/doc/channel/clawbot.html)）：
 
+- **首次使用前**：扫码绑定后，需先在微信里**主动给 ClawBot 发一条消息**，PushPlus 才能下发推送（推送测试同理）
 - 每推送 **10 条**后，需再主动发一条消息给 ClawBot
 - 每 **24 小时**内需至少主动对话一次，否则后续推送可能失败
 

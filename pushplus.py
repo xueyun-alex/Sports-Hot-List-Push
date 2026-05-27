@@ -31,6 +31,11 @@ RATE_LIMIT_CODES = frozenset({900})
 _access_key_lock = threading.Lock()
 _access_key_cache: Optional[str] = None
 _access_key_expires_at: Optional[datetime] = None
+_access_key_unavailable = False
+
+
+def is_delivery_verify_available() -> bool:
+    return PUSHPLUS_VERIFY_ENABLED and not _access_key_unavailable
 
 
 def build_push_title(report_label: str, content: str) -> str:
@@ -44,19 +49,37 @@ def build_push_title(report_label: str, content: str) -> str:
     return f"体育热榜 | {report_label}"
 
 
-def send_test_message() -> bool:
+def send_test_message() -> Tuple[bool, str]:
     if not PUSHPLUS_ENABLED:
         logger.warning("PushPlus disabled or PUSHPLUS_TOKEN not set, skip test push")
-        return False
+        return False, "未配置 PUSHPLUS_TOKEN"
 
     tz = get_tz()
     now = datetime.now(tz)
     title = "体育热榜 | 测试消息"
     content = (
-        "这是一条 PushPlus 测试消息。\n"
+        "这是一条 PushPlus 测试消息。每推 10 条、或超过 24 小时没对话，要再发一条消息给 ClawBot 才能继续收推送\n"
         f"发送时间: {now.strftime('%Y-%m-%d %H:%M:%S')}"
     )
-    return send_report(title, content) is not None
+    ok = send_report_with_retry(title, content)
+    if ok and is_delivery_verify_available():
+        return True, "测试消息已送达微信（PushPlus 已确认）"
+    if ok:
+        return (
+            True,
+            "测试消息已提交 PushPlus；若微信未收到，请先在微信里给 ClawBot 发一条消息"
+            "（绑定后首次及每 10 条推送后都需主动对话一次）",
+        )
+    if _access_key_unavailable:
+        return (
+            False,
+            "发送失败：PUSHPLUS_SECRET_KEY 未授权或 IP 未在白名单，"
+            "请在 PushPlus 个人中心检查密钥与开放接口设置",
+        )
+    return (
+        False,
+        "发送失败：请检查 Token、实名认证与 ClawBot 绑定激活状态",
+    )
 
 
 def _post_json(
@@ -111,7 +134,10 @@ def _get_json(
 
 
 def _fetch_access_key(session: Optional[requests.Session] = None) -> Optional[str]:
-    global _access_key_cache, _access_key_expires_at
+    global _access_key_cache, _access_key_expires_at, _access_key_unavailable
+
+    if _access_key_unavailable:
+        return None
 
     if not PUSHPLUS_SECRET_KEY:
         logger.warning("PUSHPLUS_SECRET_KEY not set, cannot query delivery status")
@@ -131,8 +157,10 @@ def _fetch_access_key(session: Optional[requests.Session] = None) -> Optional[st
         )
         return None
     if code in (401, 403):
+        _access_key_unavailable = True
         logger.error(
-            "PushPlus access key denied (code=%s): %s — check SecretKey and IP whitelist",
+            "PushPlus access key denied (code=%s): %s — check SecretKey and IP whitelist; "
+            "delivery verification disabled for this session",
             code,
             result.get("msg", result),
         )
@@ -317,8 +345,17 @@ def send_report_with_retry(
         logger.warning("PushPlus disabled or PUSHPLUS_TOKEN not set, skip push")
         return False
 
-    if not PUSHPLUS_VERIFY_ENABLED:
-        logger.info("PushPlus delivery verification disabled, submit-only retries")
+    if PUSHPLUS_VERIFY_ENABLED and PUSHPLUS_SECRET_KEY and not _access_key_unavailable:
+        get_access_key(session=session)
+
+    if not is_delivery_verify_available():
+        if PUSHPLUS_VERIFY_ENABLED and _access_key_unavailable:
+            logger.warning(
+                "PushPlus delivery verification unavailable (access key denied), "
+                "using submit-only retries"
+            )
+        else:
+            logger.info("PushPlus delivery verification disabled, submit-only retries")
         return _send_with_submit_retries(title, content, session=session)
 
     for attempt in range(1, PUSHPLUS_PUSH_MAX_RETRIES + 1):

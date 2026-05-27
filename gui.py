@@ -555,12 +555,23 @@ class HotListApp:
 
         ttk.Label(toolbar, text="体育热榜监控", font=FONT_TITLE).pack(side="left")
 
+        push_frame = ttk.Frame(toolbar)
+        push_frame.pack(side="right", padx=(0, 4))
+
         self.push_test_btn = ttk.Button(
-            toolbar,
+            push_frame,
             text="推送测试",
             command=self._test_push,
         )
-        self.push_test_btn.pack(side="right", padx=(0, 4))
+        self.push_test_btn.pack(side="top")
+
+        ttk.Label(
+            push_frame,
+            text="微信先给ClawBot发一条消息",
+            font=FONT_STATUS,
+            wraplength=220,
+            justify="center",
+        ).pack(side="top", pady=(2, 0))
 
         self.refresh_btn = ttk.Button(
             toolbar,
@@ -723,20 +734,16 @@ class HotListApp:
         self.status_var.set("状态：正在发送测试消息...")
 
         def worker() -> None:
-            ok = send_test_message()
-            self.root.after(0, lambda: self._finish_push_test(ok))
+            ok, detail = send_test_message()
+            self.root.after(0, lambda: self._finish_push_test(ok, detail))
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _finish_push_test(self, ok: bool) -> None:
+    def _finish_push_test(self, ok: bool, detail: str) -> None:
         self._push_testing = False
         self.push_test_btn.configure(state="normal")
-        if ok:
-            self.status_var.set("状态：测试消息已发送到微信")
-        else:
-            self.status_var.set(
-                "状态：测试消息发送失败，请检查 Token 与 ClawBot 授权"
-            )
+        prefix = "状态："
+        self.status_var.set(prefix + detail if detail else prefix + ("测试成功" if ok else "测试失败"))
 
     def _on_close(self) -> None:
         self.monitor.stop()

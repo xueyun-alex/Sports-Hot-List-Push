@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 from PyInstaller.utils.hooks import collect_all
+import certifi
 
 block_cipher = None
 
@@ -11,7 +12,7 @@ hiddenimports = [
     "apscheduler.executors.pool",
 ]
 
-datas = []
+datas = [(certifi.where(), "certifi")]
 binaries = []
 
 tzdata_datas, tzdata_binaries, tzdata_hiddenimports = collect_all("tzdata")
