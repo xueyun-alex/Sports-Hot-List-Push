@@ -55,9 +55,33 @@ POLL_INTERVAL_MINUTES = 5
 TOP_N_TRACK = 10
 TOP_N_REPORT = 5
 REPORT_FILE = DATA_DIR / "hotlist_report.txt"
+AI_CATEGORY_URL = f"{TOPHUB_BASE_URL}/c/ai?&p=1"
+AI_TOP_N_TRACK = 6
+AI_REPORT_FILE = DATA_DIR / "ai_hotlist_report.txt"
 DB_PATH = DATA_DIR / "records.db"
 TIMEZONE = "Asia/Shanghai"
 RETENTION_DAYS = 30
+
+CATEGORY_SPORTS = "sports"
+CATEGORY_AI = "ai"
+
+CATEGORIES = {
+    CATEGORY_SPORTS: {
+        "label": "体育",
+        "push_prefix": "体育热榜",
+        "top_n_track": TOP_N_TRACK,
+        "top_n_report": TOP_N_REPORT,
+        "report_file": REPORT_FILE,
+    },
+    CATEGORY_AI: {
+        "label": "AI",
+        "push_prefix": "AI热榜",
+        "top_n_track": AI_TOP_N_TRACK,
+        "top_n_report": TOP_N_REPORT,
+        "report_file": AI_REPORT_FILE,
+        "category_url": AI_CATEGORY_URL,
+    },
+}
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

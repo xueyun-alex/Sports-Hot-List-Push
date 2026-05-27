@@ -6,9 +6,9 @@ import sys
 from datetime import datetime
 from typing import Tuple
 
-from config import DATA_DIR
+from config import CATEGORIES, CATEGORY_AI, CATEGORY_SPORTS, DATA_DIR, PLATFORMS
 from reporter import generate_evening_report, generate_morning_report
-from scraper import HotItem, fetch_all_platforms
+from scraper import HotItem, fetch_ai_category_modules, fetch_all_platforms
 from storage import Storage, evening_report_window, morning_report_window
 from timezone_utils import get_tz
 
@@ -35,20 +35,26 @@ def test_window_logic() -> None:
     logger.info("Window logic OK")
 
 
-def _seed_mock_data(storage: Storage, polled_at: datetime) -> None:
+def _seed_mock_data(
+    storage: Storage,
+    polled_at: datetime,
+    category: str,
+    platform_keys: Tuple[str, ...],
+) -> None:
     mock_items = [
         HotItem(1, "测试条目A", "https://example.com/a"),
         HotItem(2, "测试条目B", "https://example.com/b"),
     ]
-    for key in ("sina_sports", "douyin_sports", "hupu_nba", "dongqiudi"):
-        storage.record_poll(key, mock_items, polled_at)
+    for key in platform_keys:
+        storage.record_poll(key, mock_items, polled_at, category=category)
 
 
 def test_poll_and_report(use_live_fetch: bool = True) -> Tuple[str, str]:
     test_db = DATA_DIR / "test_records.db"
-    test_report = DATA_DIR / "test_hotlist_report.txt"
+    test_sports_report = DATA_DIR / "test_hotlist_report.txt"
+    test_ai_report = DATA_DIR / "test_ai_hotlist_report.txt"
 
-    for path in (test_db, test_report):
+    for path in (test_db, test_sports_report, test_ai_report):
         if path.exists():
             path.unlink()
 
@@ -56,41 +62,99 @@ def test_poll_and_report(use_live_fetch: bool = True) -> Tuple[str, str]:
     tz = get_tz()
     now = datetime.now(tz)
 
-    total = 0
+    ai_platforms: dict = {}
     if use_live_fetch:
-        results = fetch_all_platforms()
-        for platform_key, items in results.items():
+        sports_results = fetch_all_platforms()
+        for platform_key, items in sports_results.items():
             if items:
-                total += storage.record_poll(platform_key, items, now)
-                logger.info("Platform %s: %d items", platform_key, len(items))
+                storage.record_poll(
+                    platform_key, items, now, category=CATEGORY_SPORTS
+                )
+                logger.info("Sports %s: %d items", platform_key, len(items))
 
-    if total == 0:
-        logger.warning("Using mock data")
-        _seed_mock_data(storage, now)
+        ai_platforms, ai_results = fetch_ai_category_modules()
+        for platform_key, items in ai_results.items():
+            if items:
+                storage.record_poll(
+                    platform_key, items, now, category=CATEGORY_AI
+                )
+                logger.info("AI %s: %d items", platform_key, len(items))
 
-    evening = generate_evening_report(storage, now=now, report_file=test_report)
-    morning = generate_morning_report(
+        if ai_platforms:
+            logger.info("AI modules discovered: %d", len(ai_platforms))
+
+    sports_count = storage.count_appearances(category=CATEGORY_SPORTS)
+    ai_count = storage.count_appearances(category=CATEGORY_AI)
+    if sports_count == 0:
+        logger.warning("Using mock sports data")
+        _seed_mock_data(
+            storage,
+            now,
+            CATEGORY_SPORTS,
+            tuple(PLATFORMS.keys()),
+        )
+    if ai_count == 0:
+        logger.warning("Using mock AI data")
+        _seed_mock_data(
+            storage,
+            now,
+            CATEGORY_AI,
+            ("ai_mock_module",),
+        )
+        ai_platforms = {"ai_mock_module": {"name": "测试AI模块"}}
+
+    if not ai_platforms:
+        ai_platforms = {"ai_mock_module": {"name": "测试AI模块"}}
+
+    evening_sports = generate_evening_report(
         storage,
+        CATEGORY_SPORTS,
+        PLATFORMS,
+        now=now,
+        report_file=test_sports_report,
+    )
+    evening_ai = generate_evening_report(
+        storage,
+        CATEGORY_AI,
+        ai_platforms,
+        now=now,
+        report_file=test_ai_report,
+    )
+    morning_sports = generate_morning_report(
+        storage,
+        CATEGORY_SPORTS,
+        PLATFORMS,
         now=now.replace(hour=8, minute=30),
-        report_file=test_report,
+        report_file=test_sports_report,
+    )
+    morning_ai = generate_morning_report(
+        storage,
+        CATEGORY_AI,
+        ai_platforms,
+        now=now.replace(hour=8, minute=30),
+        report_file=test_ai_report,
     )
 
-    assert "全站综合 Top5" in evening
-    assert "全站综合 Top5" in morning
-    assert test_report.exists()
-    content = test_report.read_text(encoding="utf-8")
-    assert "晚间报告" in content
-    assert "晨间报告" in content
+    for content in (evening_sports, evening_ai, morning_sports, morning_ai):
+        assert "全站综合 Top5" in content
 
-    logger.info("Report file written to %s (%d bytes)", test_report, len(content))
+    assert test_sports_report.exists()
+    assert test_ai_report.exists()
+    sports_content = test_sports_report.read_text(encoding="utf-8")
+    ai_content = test_ai_report.read_text(encoding="utf-8")
+    assert "晚间报告" in sports_content
+    assert "分类: AI" in ai_content
+
+    logger.info("Sports report: %s (%d bytes)", test_sports_report, len(sports_content))
+    logger.info("AI report: %s (%d bytes)", test_ai_report, len(ai_content))
     logger.info("Database at %s", test_db)
-    return evening, morning
+    return evening_sports, evening_ai
 
 
-def test_push(evening_report: str) -> None:
+def test_push(evening_report: str, prefix: str) -> None:
     from pushplus import build_push_title, send_report
 
-    title = build_push_title("晚间报告 (18:30)", evening_report)
+    title = build_push_title(prefix, "晚间报告 (18:30)", evening_report)
     if send_report(title, evening_report) is None:
         raise RuntimeError("PushPlus push failed")
 
@@ -100,16 +164,24 @@ def main() -> int:
     parser.add_argument(
         "--push",
         action="store_true",
-        help="After verification, send evening report via PushPlus",
+        help="After verification, send sports and AI evening reports via PushPlus",
+    )
+    parser.add_argument(
+        "--no-live-fetch",
+        action="store_true",
+        help="Skip live TopHub fetch (use mock data only)",
     )
     args = parser.parse_args()
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     test_window_logic()
-    evening, _morning = test_poll_and_report(use_live_fetch=True)
+    evening_sports, evening_ai = test_poll_and_report(
+        use_live_fetch=not args.no_live_fetch
+    )
     if args.push:
-        test_push(evening)
-        logger.info("PushPlus test push sent")
+        test_push(evening_sports, CATEGORIES[CATEGORY_SPORTS]["push_prefix"])
+        test_push(evening_ai, CATEGORIES[CATEGORY_AI]["push_prefix"])
+        logger.info("PushPlus test pushes sent (sports + AI)")
     logger.info("All verification checks passed")
     return 0
 

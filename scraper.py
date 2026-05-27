@@ -1,13 +1,20 @@
 import logging
 import re
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup, Tag
 
-from config import PLATFORMS, TOP_N_TRACK, TOPHUB_BASE_URL, USER_AGENT
+from config import (
+    AI_CATEGORY_URL,
+    AI_TOP_N_TRACK,
+    PLATFORMS,
+    TOP_N_TRACK,
+    TOPHUB_BASE_URL,
+    USER_AGENT,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -211,3 +218,85 @@ def fetch_all_platforms(session: Optional[requests.Session] = None) -> dict:
             logger.exception("Failed to fetch %s: %s", key, exc)
             results[key] = []
     return results
+
+
+def fetch_category_html(
+    url: str,
+    session: Optional[requests.Session] = None,
+) -> str:
+    if session is None:
+        session = requests.Session()
+        session.trust_env = False
+    response = session.get(
+        url,
+        headers={"User-Agent": USER_AGENT},
+        timeout=30,
+    )
+    response.raise_for_status()
+    response.encoding = response.apparent_encoding or "utf-8"
+    return response.text
+
+
+def _extract_hashid_from_card(card: Tag) -> Optional[str]:
+    for anchor in card.find_all("a", href=True):
+        href = anchor["href"]
+        if href.startswith("/n/"):
+            return href.split("/")[-1]
+    return None
+
+
+def _extract_card_title(card: Tag) -> str:
+    title_el = card.select_one(".cc-cd-lb, .cc-cd-lb-v, a.cc-cd-lb")
+    if title_el:
+        return title_el.get_text(strip=True)
+    return ""
+
+
+def parse_category_modules(
+    html: str,
+    limit: int = AI_TOP_N_TRACK,
+) -> Tuple[Dict[str, dict], Dict[str, List[HotItem]]]:
+    soup = BeautifulSoup(html, "html.parser")
+    platforms: Dict[str, dict] = {}
+    results: Dict[str, List[HotItem]] = {}
+
+    for card in soup.select("div.cc-cd, motion.cc-cd"):
+        hashid = _extract_hashid_from_card(card)
+        if not hashid:
+            continue
+
+        name = _extract_card_title(card) or hashid
+        platform_key = f"ai_{hashid}"
+        platforms[platform_key] = {"name": name, "hashid": hashid}
+
+        items: List[HotItem] = []
+        for index, link in enumerate(card.select("div.cc-cd-cb-l a[href]"), start=1):
+            href = link.get("href", "")
+            if not href.startswith("http"):
+                continue
+            title = _extract_title_from_link(link)
+            if not title:
+                continue
+            rank = _extract_rank_from_link(link, len(items) + 1)
+            items.append(HotItem(rank=rank, title=title, url=href))
+            if len(items) >= limit:
+                break
+
+        results[platform_key] = items
+        if not items:
+            logger.warning("No items parsed for AI module %s (%s)", name, hashid)
+
+    return platforms, results
+
+
+def fetch_ai_category_modules(
+    session: Optional[requests.Session] = None,
+) -> Tuple[Dict[str, dict], Dict[str, List[HotItem]]]:
+    client = session or requests.Session()
+    client.trust_env = False
+    try:
+        html = fetch_category_html(AI_CATEGORY_URL, session=client)
+        return parse_category_modules(html)
+    except Exception as exc:
+        logger.exception("Failed to fetch AI category page: %s", exc)
+        return {}, {}

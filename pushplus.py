@@ -38,25 +38,25 @@ def is_delivery_verify_available() -> bool:
     return PUSHPLUS_VERIFY_ENABLED and not _access_key_unavailable
 
 
-def build_push_title(report_label: str, content: str) -> str:
+def build_push_title(prefix: str, report_label: str, content: str) -> str:
     report_date = ""
     for line in content.splitlines():
         if line.startswith("报告时间:"):
             report_date = line.split(":", 1)[1].strip().split()[0]
             break
     if report_date:
-        return f"体育热榜 | {report_label} {report_date}"
-    return f"体育热榜 | {report_label}"
+        return f"{prefix} | {report_label} {report_date}"
+    return f"{prefix} | {report_label}"
 
 
-def send_test_message() -> Tuple[bool, str]:
+def send_test_message(prefix: str = "体育热榜") -> Tuple[bool, str]:
     if not PUSHPLUS_ENABLED:
         logger.warning("PushPlus disabled or PUSHPLUS_TOKEN not set, skip test push")
         return False, "未配置 PUSHPLUS_TOKEN"
 
     tz = get_tz()
     now = datetime.now(tz)
-    title = "体育热榜 | 测试消息"
+    title = f"{prefix} | 测试消息"
     content = (
         "这是一条 PushPlus 测试消息。每推 10 条、或超过 24 小时没对话，要再发一条消息给 ClawBot 才能继续收推送\n"
         f"发送时间: {now.strftime('%Y-%m-%d %H:%M:%S')}"

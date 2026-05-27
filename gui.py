@@ -8,7 +8,15 @@ from datetime import datetime, timedelta
 from tkinter import ttk
 from typing import Callable, Dict, List, Optional, Tuple
 
-from config import PLATFORMS, POLL_INTERVAL_MINUTES, PUSHPLUS_ENABLED, RETENTION_DAYS
+from config import (
+    CATEGORIES,
+    CATEGORY_AI,
+    CATEGORY_SPORTS,
+    PLATFORMS,
+    POLL_INTERVAL_MINUTES,
+    PUSHPLUS_ENABLED,
+    RETENTION_DAYS,
+)
 from monitor import HotListMonitor
 from pushplus import send_test_message
 from scraper import HotItem
@@ -37,8 +45,35 @@ def _resource_path(relative_path: str) -> str:
     return os.path.join(base_dir, relative_path)
 
 
-def _platform_display_name(platform_key: str) -> str:
-    return PLATFORMS.get(platform_key, {}).get("name", platform_key)
+_APP_USER_MODEL_ID = "SportsHotList.Monitor.1"
+
+
+def _prepare_windows_taskbar_icon() -> None:
+    """Set AppUserModelID before Tk() so the taskbar uses our icon, not python.exe."""
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+            _APP_USER_MODEL_ID
+        )
+    except (AttributeError, OSError):
+        pass
+
+
+def _apply_window_icon(root: tk.Tk) -> None:
+    icon_path = _resource_path("telegram.ico")
+    if not os.path.exists(icon_path):
+        return
+    try:
+        root.iconbitmap(default=icon_path)
+    except tk.TclError:
+        logger.debug("iconbitmap failed for %s", icon_path, exc_info=True)
+
+
+def _platform_display_name(platform_key: str, platforms: Dict[str, dict]) -> str:
+    return platforms.get(platform_key, {}).get("name", platform_key)
 
 
 def _format_polled_at(polled_at: str) -> str:
@@ -80,8 +115,14 @@ def _format_datetime(dt: datetime) -> str:
 
 
 class PlatformPanel(ttk.LabelFrame):
-    def __init__(self, master: tk.Misc, platform_key: str) -> None:
-        super().__init__(master, text=PLATFORMS[platform_key]["name"], padding=4)
+    def __init__(
+        self,
+        master: tk.Misc,
+        platform_key: str,
+        display_name: str,
+        tree_height: int = 10,
+    ) -> None:
+        super().__init__(master, text=display_name, padding=4)
         self.platform_key = platform_key
         self._url_map: Dict[str, Optional[str]] = {}
 
@@ -89,7 +130,7 @@ class PlatformPanel(ttk.LabelFrame):
             self,
             columns=("rank", "title"),
             show="headings",
-            height=10,
+            height=tree_height,
             selectmode="browse",
         )
         self.tree.heading("rank", text="#")
@@ -113,6 +154,9 @@ class PlatformPanel(ttk.LabelFrame):
 
     def set_select_callback(self, callback: Callable[[str], None]) -> None:
         self._on_select_callback = callback
+
+    def set_display_name(self, name: str) -> None:
+        self.configure(text=name)
 
     def update_items(self, items: List[HotItem]) -> None:
         self.tree.delete(*self.tree.get_children())
@@ -151,11 +195,15 @@ class HistoryPanel(ttk.Frame):
         self,
         master: tk.Misc,
         storage: Storage,
+        get_category: Callable[[], str],
+        get_platforms: Callable[[], Dict[str, dict]],
         on_select: Callable[[str], None],
         on_loading: Callable[[bool], None],
     ) -> None:
         super().__init__(master, padding=(8, 4, 8, 4))
         self.storage = storage
+        self._get_category = get_category
+        self._get_platforms = get_platforms
         self._on_select = on_select
         self._on_loading = on_loading
         self._url_map: Dict[str, Optional[str]] = {}
@@ -167,11 +215,10 @@ class HistoryPanel(ttk.Frame):
 
         ttk.Label(filter_bar, text="平台:", font=FONT_NORMAL).pack(side="left")
         self.platform_var = tk.StringVar(value="全部")
-        platform_values = ["全部"] + [_platform_display_name(k) for k in PLATFORMS]
         self.platform_combo = ttk.Combobox(
             filter_bar,
             textvariable=self.platform_var,
-            values=platform_values,
+            values=["全部"],
             state="readonly",
             width=16,
         )
@@ -229,14 +276,31 @@ class HistoryPanel(ttk.Frame):
             anchor="w",
         ).pack(fill="x", pady=(4, 0))
 
+    def refresh_platform_filter(self) -> None:
+        platforms = self._get_platforms()
+        values = ["全部"] + [
+            _platform_display_name(k, platforms) for k in platforms
+        ]
+        self.platform_combo.configure(values=values)
+        if self.platform_var.get() not in values:
+            self.platform_var.set("全部")
+
     def on_tab_shown(self) -> None:
+        self.refresh_platform_filter()
         if not self._loaded_once:
             self.query()
+
+    def on_category_changed(self) -> None:
+        self.refresh_platform_filter()
+        self.platform_var.set("全部")
+        self._loaded_once = False
+        self.query()
 
     def _platform_key_from_display(self, display: str) -> Optional[str]:
         if display == "全部":
             return None
-        for key, info in PLATFORMS.items():
+        platforms = self._get_platforms()
+        for key, info in platforms.items():
             if info["name"] == display:
                 return key
         return None
@@ -249,26 +313,39 @@ class HistoryPanel(ttk.Frame):
         self.query_btn.configure(state="disabled")
         self._on_loading(True)
 
+        category = self._get_category()
+        platforms = self._get_platforms()
         platform_key = self._platform_key_from_display(self.platform_var.get())
         start, end = _compute_time_range(self.time_var.get())
 
         def worker() -> None:
             try:
-                total = self.storage.count_appearances(start, end, platform_key)
+                total = self.storage.count_appearances(
+                    start, end, platform_key, category=category
+                )
                 records = self.storage.fetch_appearances(
                     start,
                     end,
                     platform_key,
                     limit=FETCH_LIMIT,
+                    category=category,
                 )
-                self.after(0, lambda: self._apply_results(records, total))
+                self.after(
+                    0,
+                    lambda: self._apply_results(records, total, platforms),
+                )
             except Exception:
                 logger.exception("Failed to load history records")
                 self.after(0, lambda: self._apply_error())
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _apply_results(self, records: List[AppearanceRecord], total: int) -> None:
+    def _apply_results(
+        self,
+        records: List[AppearanceRecord],
+        total: int,
+        platforms: Dict[str, dict],
+    ) -> None:
         self.tree.delete(*self.tree.get_children())
         self._url_map.clear()
 
@@ -279,7 +356,7 @@ class HistoryPanel(ttk.Frame):
                 "end",
                 values=(
                     record.id,
-                    _platform_display_name(record.platform),
+                    _platform_display_name(record.platform, platforms),
                     rank_display,
                     record.title,
                     _format_polled_at(record.polled_at),
@@ -330,11 +407,15 @@ class CountPanel(ttk.Frame):
         self,
         master: tk.Misc,
         storage: Storage,
+        get_category: Callable[[], str],
+        get_platforms: Callable[[], Dict[str, dict]],
         on_select: Callable[[str], None],
         on_loading: Callable[[bool], None],
     ) -> None:
         super().__init__(master, padding=(8, 4, 8, 4))
         self.storage = storage
+        self._get_category = get_category
+        self._get_platforms = get_platforms
         self._on_select = on_select
         self._on_loading = on_loading
         self._url_map: Dict[str, Optional[str]] = {}
@@ -346,11 +427,10 @@ class CountPanel(ttk.Frame):
 
         ttk.Label(filter_bar, text="平台:", font=FONT_NORMAL).pack(side="left")
         self.platform_var = tk.StringVar(value="全部")
-        platform_values = ["全部"] + [_platform_display_name(k) for k in PLATFORMS]
         self.platform_combo = ttk.Combobox(
             filter_bar,
             textvariable=self.platform_var,
-            values=platform_values,
+            values=["全部"],
             state="readonly",
             width=16,
         )
@@ -408,14 +488,31 @@ class CountPanel(ttk.Frame):
             anchor="w",
         ).pack(fill="x", pady=(4, 0))
 
+    def refresh_platform_filter(self) -> None:
+        platforms = self._get_platforms()
+        values = ["全部"] + [
+            _platform_display_name(k, platforms) for k in platforms
+        ]
+        self.platform_combo.configure(values=values)
+        if self.platform_var.get() not in values:
+            self.platform_var.set("全部")
+
     def on_tab_shown(self) -> None:
+        self.refresh_platform_filter()
         if not self._loaded_once:
             self.query()
+
+    def on_category_changed(self) -> None:
+        self.refresh_platform_filter()
+        self.platform_var.set("全部")
+        self._loaded_once = False
+        self.query()
 
     def _platform_key_from_display(self, display: str) -> Optional[str]:
         if display == "全部":
             return None
-        for key, info in PLATFORMS.items():
+        platforms = self._get_platforms()
+        for key, info in platforms.items():
             if info["name"] == display:
                 return key
         return None
@@ -428,17 +525,22 @@ class CountPanel(ttk.Frame):
         self.query_btn.configure(state="disabled")
         self._on_loading(True)
 
+        category = self._get_category()
+        platforms = self._get_platforms()
         platform_key = self._platform_key_from_display(self.platform_var.get())
         start, end = _compute_count_time_range(self.time_var.get())
 
         def worker() -> None:
             try:
-                poll_count = self.storage.count_polls_in_window(start, end)
+                poll_count = self.storage.count_polls_in_window(
+                    start, end, category=category
+                )
                 if platform_key is None:
                     results = self.storage.count_global_in_window(
                         start,
                         end,
                         limit=COUNT_FETCH_LIMIT,
+                        category=category,
                     )
                 else:
                     results = self.storage.count_in_window(
@@ -446,10 +548,13 @@ class CountPanel(ttk.Frame):
                         end,
                         platform_key=platform_key,
                         limit=COUNT_FETCH_LIMIT,
+                        category=category,
                     )
                 self.after(
                     0,
-                    lambda: self._apply_results(results, start, end, poll_count),
+                    lambda: self._apply_results(
+                        results, start, end, poll_count, platforms
+                    ),
                 )
             except Exception:
                 logger.exception("Failed to load count statistics")
@@ -463,6 +568,7 @@ class CountPanel(ttk.Frame):
         start: datetime,
         end: datetime,
         poll_count: int,
+        platforms: Dict[str, dict],
     ) -> None:
         self.tree.delete(*self.tree.get_children())
         self._url_map.clear()
@@ -473,7 +579,7 @@ class CountPanel(ttk.Frame):
                 "end",
                 values=(
                     index,
-                    _platform_display_name(item.platform),
+                    _platform_display_name(item.platform, platforms),
                     item.title,
                     item.count,
                     _format_polled_at(item.last_seen),
@@ -524,14 +630,12 @@ class CountPanel(ttk.Frame):
 
 class HotListApp:
     def __init__(self) -> None:
+        _prepare_windows_taskbar_icon()
         self.root = tk.Tk()
-        self.root.title("体育热榜监控")
+        self.root.title("热榜监控")
         self.root.minsize(900, 620)
-        self.root.geometry("960x680")
-
-        icon_path = _resource_path("telegram.ico")
-        if os.path.exists(icon_path):
-            self.root.iconbitmap(icon_path)
+        self.root.geometry("960x720")
+        _apply_window_icon(self.root)
 
         style = ttk.Style()
         if "vista" in style.theme_names():
@@ -540,17 +644,43 @@ class HotListApp:
         style.configure("Treeview.Heading", font=FONT_NORMAL)
         style.configure("TLabelframe.Label", font=FONT_TITLE)
 
+        self._current_category = CATEGORY_SPORTS
         self._polling = False
         self._push_testing = False
         self._panel_loading = False
-        self._last_successful: Dict[str, List[HotItem]] = {}
+        self._last_successful: Dict[str, Dict[str, List[HotItem]]] = {
+            CATEGORY_SPORTS: {},
+            CATEGORY_AI: {},
+        }
         self.monitor = HotListMonitor(on_poll_complete=self._schedule_ui_update)
         self.history_storage = Storage()
 
         self._build_ui()
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
+    def _get_category(self) -> str:
+        return self._current_category
+
+    def _get_platforms(self) -> Dict[str, dict]:
+        if self._current_category == CATEGORY_SPORTS:
+            return PLATFORMS
+        return self.monitor.ai_platforms
+
     def _build_ui(self) -> None:
+        category_bar = ttk.Frame(self.root, padding=(8, 6, 8, 0))
+        category_bar.pack(fill="x")
+
+        ttk.Label(category_bar, text="分类:", font=FONT_NORMAL).pack(side="left")
+        self.category_var = tk.StringVar(value=CATEGORY_SPORTS)
+        for cat_key in (CATEGORY_SPORTS, CATEGORY_AI):
+            ttk.Radiobutton(
+                category_bar,
+                text=CATEGORIES[cat_key]["label"],
+                variable=self.category_var,
+                value=cat_key,
+                command=self._on_category_changed,
+            ).pack(side="left", padx=(8, 0))
+
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill="both", expand=True)
 
@@ -564,7 +694,10 @@ class HotListApp:
         toolbar = ttk.Frame(live_tab, padding=(8, 8, 8, 4))
         toolbar.pack(fill="x")
 
-        ttk.Label(toolbar, text="体育热榜监控", font=FONT_TITLE).pack(side="left")
+        self.live_title_label = ttk.Label(
+            toolbar, text="体育热榜监控", font=FONT_TITLE
+        )
+        self.live_title_label.pack(side="left")
 
         push_frame = ttk.Frame(toolbar)
         push_frame.pack(side="right", padx=(0, 4))
@@ -591,17 +724,22 @@ class HotListApp:
         )
         self.refresh_btn.pack(side="right")
 
-        grid = ttk.Frame(live_tab, padding=(8, 4, 8, 4))
-        grid.pack(fill="both", expand=True)
-        grid.columnconfigure(0, weight=1)
-        grid.columnconfigure(1, weight=1)
-        grid.rowconfigure(0, weight=1)
-        grid.rowconfigure(1, weight=1)
+        self.sports_live_frame = ttk.Frame(live_tab, padding=(8, 4, 8, 4))
+        self.sports_live_frame.pack(fill="both", expand=True)
+        self.sports_live_frame.columnconfigure(0, weight=1)
+        self.sports_live_frame.columnconfigure(1, weight=1)
+        self.sports_live_frame.rowconfigure(0, weight=1)
+        self.sports_live_frame.rowconfigure(1, weight=1)
 
-        self.panels: Dict[str, PlatformPanel] = {}
+        self.sports_panels: Dict[str, PlatformPanel] = {}
         for row_idx, row_keys in enumerate(PLATFORM_LAYOUT):
             for col_idx, platform_key in enumerate(row_keys):
-                panel = PlatformPanel(grid, platform_key)
+                panel = PlatformPanel(
+                    self.sports_live_frame,
+                    platform_key,
+                    PLATFORMS[platform_key]["name"],
+                    tree_height=10,
+                )
                 panel.grid(
                     row=row_idx,
                     column=col_idx,
@@ -610,11 +748,45 @@ class HotListApp:
                     pady=(0 if row_idx == 0 else 4, 0),
                 )
                 panel.set_select_callback(self._show_title_in_status)
-                self.panels[platform_key] = panel
+                self.sports_panels[platform_key] = panel
+
+        self.ai_live_outer = ttk.Frame(live_tab, padding=(8, 4, 8, 4))
+        self.ai_canvas = tk.Canvas(self.ai_live_outer, highlightthickness=0)
+        self.ai_scrollbar = ttk.Scrollbar(
+            self.ai_live_outer, orient="vertical", command=self.ai_canvas.yview
+        )
+        self.ai_scroll_frame = ttk.Frame(self.ai_canvas)
+        self.ai_scroll_frame.bind(
+            "<Configure>",
+            lambda _e: self.ai_canvas.configure(
+                scrollregion=self.ai_canvas.bbox("all")
+            ),
+        )
+        self.ai_canvas_window = self.ai_canvas.create_window(
+            (0, 0), window=self.ai_scroll_frame, anchor="nw"
+        )
+        self.ai_canvas.configure(yscrollcommand=self.ai_scrollbar.set)
+        self.ai_canvas.pack(side="left", fill="both", expand=True)
+        self.ai_scrollbar.pack(side="right", fill="y")
+        self.ai_canvas.bind(
+            "<Configure>",
+            lambda e: self.ai_canvas.itemconfigure(
+                self.ai_canvas_window, width=e.width
+            ),
+        )
+        self.ai_canvas.bind_all(
+            "<MouseWheel>",
+            self._on_ai_mousewheel,
+            add="+",
+        )
+
+        self.ai_panels: Dict[str, PlatformPanel] = {}
 
         self.history_panel = HistoryPanel(
             history_tab,
             self.history_storage,
+            get_category=self._get_category,
+            get_platforms=self._get_platforms,
             on_select=self._show_title_in_status,
             on_loading=lambda loading: self._set_panel_loading(
                 loading, "正在加载历史记录..."
@@ -625,6 +797,8 @@ class HotListApp:
         self.count_panel = CountPanel(
             counts_tab,
             self.history_storage,
+            get_category=self._get_category,
+            get_platforms=self._get_platforms,
             on_select=self._show_title_in_status,
             on_loading=lambda loading: self._set_panel_loading(
                 loading, "正在加载计数统计..."
@@ -644,6 +818,34 @@ class HotListApp:
             font=FONT_STATUS,
             anchor="w",
         ).pack(fill="x")
+
+        self._show_live_view()
+
+    def _on_ai_mousewheel(self, event: tk.Event) -> None:
+        if not self.ai_live_outer.winfo_ismapped():
+            return
+        self.ai_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    def _on_category_changed(self) -> None:
+        self._current_category = self.category_var.get()
+        label = CATEGORIES[self._current_category]["label"]
+        self.live_title_label.configure(text=f"{label}热榜监控")
+        self._show_live_view()
+        self._refresh_current_live_panels()
+
+        tab_index = self.notebook.index(self.notebook.select())
+        if tab_index == 1:
+            self.history_panel.on_category_changed()
+        elif tab_index == 2:
+            self.count_panel.on_category_changed()
+
+    def _show_live_view(self) -> None:
+        if self._current_category == CATEGORY_SPORTS:
+            self.ai_live_outer.pack_forget()
+            self.sports_live_frame.pack(fill="both", expand=True)
+        else:
+            self.sports_live_frame.pack_forget()
+            self.ai_live_outer.pack(fill="both", expand=True)
 
     def _on_tab_changed(self, _event: tk.Event) -> None:
         tab_index = self.notebook.index(self.notebook.select())
@@ -680,31 +882,122 @@ class HotListApp:
 
     def _schedule_ui_update(
         self,
-        results: Dict[str, List[HotItem]],
+        results_by_category: Dict[str, Dict[str, List[HotItem]]],
         polled_at: datetime,
     ) -> None:
-        self.root.after(0, lambda: self._refresh_panels(results, polled_at))
+        self.root.after(
+            0,
+            lambda: self._refresh_panels(results_by_category, polled_at),
+        )
+
+    def _ensure_ai_panel(self, platform_key: str, name: str) -> PlatformPanel:
+        if platform_key in self.ai_panels:
+            self.ai_panels[platform_key].set_display_name(name)
+            return self.ai_panels[platform_key]
+
+        index = len(self.ai_panels)
+        row = index // 2
+        col = index % 2
+        panel = PlatformPanel(
+            self.ai_scroll_frame,
+            platform_key,
+            name,
+            tree_height=6,
+        )
+        panel.grid(
+            row=row,
+            column=col,
+            sticky="nsew",
+            padx=(0 if col == 0 else 4, 0),
+            pady=(0 if row == 0 else 4, 0),
+        )
+        panel.set_select_callback(self._show_title_in_status)
+        self.ai_panels[platform_key] = panel
+        return panel
+
+    def _refresh_category_panels(
+        self,
+        category: str,
+        results: Dict[str, List[HotItem]],
+        platforms: Dict[str, dict],
+    ) -> List[str]:
+        failed: List[str] = []
+        cache = self._last_successful[category]
+
+        if category == CATEGORY_SPORTS:
+            panels = self.sports_panels
+        else:
+            panels = self.ai_panels
+            active_keys = set(results.keys()) | set(cache.keys())
+            for key in list(self.ai_panels.keys()):
+                if key not in active_keys:
+                    self.ai_panels[key].grid_remove()
+
+            for platform_key in results:
+                name = platforms.get(platform_key, {}).get("name", platform_key)
+                self._ensure_ai_panel(platform_key, name)
+
+            row_count = (len(active_keys) + 1) // 2
+            for row in range(row_count):
+                self.ai_scroll_frame.rowconfigure(row, weight=0)
+
+        for platform_key, panel in panels.items():
+            if category == CATEGORY_AI and platform_key not in (
+                set(results.keys()) | set(cache.keys())
+            ):
+                continue
+            if category == CATEGORY_AI:
+                panel.grid()
+
+            items = results.get(platform_key, [])
+            if items:
+                cache[platform_key] = items
+                panel.update_items(items)
+            elif platform_key in cache:
+                panel.update_items(cache[platform_key])
+                failed.append(
+                    _platform_display_name(platform_key, platforms)
+                )
+            else:
+                panel.update_items([])
+                failed.append(
+                    _platform_display_name(platform_key, platforms)
+                )
+
+        return failed
+
+    def _refresh_current_live_panels(self) -> None:
+        results = {
+            CATEGORY_SPORTS: {},
+            CATEGORY_AI: {},
+        }
+        for cat in (CATEGORY_SPORTS, CATEGORY_AI):
+            cache = self._last_successful.get(cat, {})
+            for key, items in cache.items():
+                results[cat][key] = items
+        polled_at = getattr(self, "_last_polled_at", None)
+        if polled_at:
+            self._refresh_panels(results, polled_at)
 
     def _refresh_panels(
         self,
-        results: Dict[str, List[HotItem]],
+        results_by_category: Dict[str, Dict[str, List[HotItem]]],
         polled_at: datetime,
     ) -> None:
         self._polling = False
         self._last_polled_at = polled_at
 
-        failed = []
-        for platform_key, panel in self.panels.items():
-            items = results.get(platform_key, [])
-            if items:
-                self._last_successful[platform_key] = items
-                panel.update_items(items)
-            elif platform_key in self._last_successful:
-                panel.update_items(self._last_successful[platform_key])
-                failed.append(PLATFORMS[platform_key]["name"])
-            else:
-                panel.update_items([])
-                failed.append(PLATFORMS[platform_key]["name"])
+        all_failed: List[str] = []
+        for category in (CATEGORY_SPORTS, CATEGORY_AI):
+            cat_results = results_by_category.get(category, {})
+            platforms = (
+                PLATFORMS if category == CATEGORY_SPORTS else self.monitor.ai_platforms
+            )
+            failed = self._refresh_category_panels(
+                category, cat_results, platforms
+            )
+            if category == self._current_category:
+                all_failed = failed
 
         self.refresh_btn.configure(state="normal")
 
@@ -713,8 +1006,8 @@ class HotListApp:
 
         time_str = polled_at.strftime("%Y-%m-%d %H:%M:%S")
         status = f"状态：就绪 | 上次更新 {time_str} | 每 {POLL_INTERVAL_MINUTES} 分钟自动刷新"
-        if failed:
-            status += f" | 抓取失败：{', '.join(failed)}"
+        if all_failed:
+            status += f" | 抓取失败：{', '.join(all_failed)}"
         self.status_var.set(status)
 
     def _set_polling_status(self) -> None:
@@ -742,10 +1035,11 @@ class HotListApp:
 
         self._push_testing = True
         self.push_test_btn.configure(state="disabled")
-        self.status_var.set("状态：正在发送测试消息...")
+        prefix = CATEGORIES[self._current_category]["push_prefix"]
+        self.status_var.set(f"状态：正在发送{prefix}测试消息...")
 
         def worker() -> None:
-            ok, detail = send_test_message()
+            ok, detail = send_test_message(prefix=prefix)
             self.root.after(0, lambda: self._finish_push_test(ok, detail))
 
         threading.Thread(target=worker, daemon=True).start()

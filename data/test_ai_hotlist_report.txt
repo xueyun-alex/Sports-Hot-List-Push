@@ -1,0 +1,209 @@
+==================================================
+报告类型: 晚间报告 (18:30)
+分类: AI
+报告时间: 2026-05-27 18:30:00
+统计窗口: 2026-05-27 08:30:00 ~ 2026-05-27 18:30:00 (10小时)
+采集轮次: 1 次
+
+【掘金 Top5】
+1. (1次) 2026 Google I/O ，意料之外的 Antigravity 2.0 和消失的 Gemini CLI
+   链接: https://juejin.cn/post/7641409122263285766
+2. (1次) AI Harness 企业级落地实践（一）
+   链接: https://juejin.cn/post/7641912628643528738
+3. (1次) SenseNova-U1 实战体验：从网页版生成，到 Mac 踩坑，再到 CUDA 服务器跑通本地部署
+   链接: https://juejin.cn/post/7642555314736136227
+4. (1次) 体验完阿里首款Design Agent，我开始替UI/前端焦虑了..
+   链接: https://juejin.cn/post/7643116195138781238
+5. (1次) 如何从0到1开发一个AI Agent
+   链接: https://juejin.cn/post/7641133523776749608
+
+【量子位 Top5】
+1. (1次) Codex自我蒸馏玩法火了！OpenAI员工亲授：复制粘贴就能让AI消灭重复劳动
+   链接: https://www.qbitai.com/2026/05/425810.html
+2. (1次) DeepSeek陈德里开发自动研究Skill，写一篇论文人类只动脑2小时
+   链接: https://www.qbitai.com/2026/05/425523.html
+3. (1次) OpenAI挖来了个F1级别车手搞公关
+   链接: https://www.qbitai.com/2026/05/425857.html
+4. (1次) 刚刚，国产AI自己造了AI，全球首例！
+   链接: https://www.qbitai.com/2026/05/425511.html
+5. (1次) 将DSA注意力引入多模态，快手Keye2.0开启强化推理新范式
+   链接: https://www.qbitai.com/2026/05/425600.html
+
+【AIbase Top5】
+1. (1次) AI日报：OpenAI未官宣新旗舰GPT-5.6意外曝光；昆仑万维发布天工SkyClaw-v1.0；阿里 Qwen3.7-Max 编程能力全球登顶第二
+   链接: https://www.aibase.com/zh/daily/28347
+2. (1次) AI日报：字节开源统一多模态大模型Lance 3B;智谱发布GLM-5.1高速版;CapCut与Gemini合作推出深度集成
+   链接: https://www.aibase.com/zh/daily/28263
+3. (1次) AI日报：字节联合港科大发布MMProLong；腾讯ima宣布开放Copilot；红果短剧取消AI仿真人短剧保底政策
+   链接: https://www.aibase.com/zh/daily/28310
+4. (1次) AI日报：小米MiMo-V2.5系列API永久降价；千问升级拍照问健康；豆包将禁用拍题答疑
+   链接: https://www.aibase.com/zh/daily/28387
+5. (1次) AI日报：腾讯上线AI助手Marvis；智谱AI推AutoClaw移动端APP；Photoshop 27.7 重磅更新
+   链接: https://www.aibase.com/zh/daily/28221
+
+【产品经理的人工智能学习库 Top5】
+1. (1次) AI前沿论文投资洞察周报（2025W49）三大顶会技术突破，解锁长视频、多模态、虚拟人新机遇
+   链接: https://easyai.tech/aipaper/aipaper_2025_w49/
+2. (1次) AI时代赋予我们的4种武器：大模型，Claude skill，workflow，AI编程
+   链接: https://easyai.tech/aiinsights/4weapons/
+3. (1次) 【长文】“持续进化模型”能否成为AI大模型的技术拐点？
+   链接: https://easyai.tech/aipaper/mindlab_3pages/
+4. (1次) 一文讲清楚LLM：大型语言模型核心解析与应用前瞻
+   链接: https://easyai.tech/blog/llms/
+5. (1次) 友情推广：TreeMind树图思维导图￼
+   链接: https://easyai.tech/blog/ad-treemind/
+
+【MIT Technology Review Top5】
+1. (1次) A reality check on the AI jobs hysteria
+   链接: https://www.technologyreview.com/2026/05/26/1137855/a-reality-check-on-the-ai-jobs-hysteria/
+2. (1次) Google I/O showed how the path for AI-driven science is shifting
+   链接: https://www.technologyreview.com/2026/05/22/1137813/google-i-o-showed-how-the-path-for-ai-science-is-shifting/
+3. (1次) It’s time to address the looming crisis in entry-level work.
+   链接: https://www.technologyreview.com/2026/05/26/1137865/its-time-to-address-the-looming-crisis-in-entry-level-work/
+4. (1次) Rethinking organizational design in the age of agentic AI
+   链接: https://www.technologyreview.com/2026/05/26/1137584/rethinking-organizational-design-in-the-age-of-agentic-ai/
+5. (1次) The Download: coding’s future, the ‘Steroid Olympics,’ and AI-driven science
+   链接: https://www.technologyreview.com/2026/05/22/1137845/the-download-coding-future-steroid-olympics-ai-science/
+
+【AI工具集 Top5】
+1. (1次) Aholo Viewer – 群核科技开源的 3D 高斯浏览器
+   链接: https://ai-bot.cn/aholo-viewer/
+2. (1次) ChatGPT Plus 和 Claude Pro 会员代充值 – 支持支付宝、微信支付
+   链接: https://ai-bot.cn/vipcheap-banner-0210/
+3. (1次) Keye-VL-2.0-30B-A3B – 快手开源的自研多模态大模型
+   链接: https://ai-bot.cn/keye-vl-2-0-30b-a3b/
+4. (1次) NoteAI – AI 一站式知识提取工具，支持视频、网页、音频
+   链接: https://ai-bot.cn/noteai/
+5. (1次) Rodin Gen-2.5 – 影眸科技推出的千万级多边形 AI 3D 模型
+   链接: https://ai-bot.cn/rodin-gen-2-5/
+
+【36氪 Top5】
+1. (1次) DeepSeek研究员让AI自己研究自己，AI执笔99%，6天搞定45页论文
+   链接: https://www.36kr.com/p/3827076263138182
+2. (1次) 三星按下一场史上最长罢工，但揭下了AI时代贫富差距的遮羞布
+   链接: https://www.36kr.com/p/3827039726130054
+3. (1次) 小米紧跟DeepSeek宣布大模型API永久降价，最高降幅99%
+   链接: https://www.36kr.com/p/3827259464585862
+4. (1次) 涨价、卡审、分成下滑，AI剧拐点：有人退圈、有人坚守，不提质就出局
+   链接: https://www.36kr.com/p/3827070038302728
+5. (1次) 稳住基本盘的小米，紧追DeepSeek
+   链接: https://www.36kr.com/p/3827245075042944
+
+【AI产品榜 Top5】
+1. (1次) DeepSeek元旦发布mHC架构论文，解决大模型训练超连接稳定性问题。
+   链接: https://www.aicpb.com/news/iframe?world=根据以下信息搜集全网最新资料，并解读。信息：DeepSeek元旦发布mHC架构论文，解决大模型训练超连接稳定性问题。
+2. (1次) OpenAI员工人均股票薪酬150万美元，创科技初创企业纪录。
+   链接: https://www.aicpb.com/news/iframe?world=根据以下信息搜集全网最新资料，并解读。信息：OpenAI员工人均股票薪酬150万美元，创科技初创企业纪录。
+3. (1次) OpenAI首款AI硬件产品或为智能笔，富士康代工，功能待市场检验。
+   链接: https://www.aicpb.com/news/iframe?world=根据以下信息搜集全网最新资料，并解读。信息：OpenAI首款AI硬件产品或为智能笔，富士康代工，功能待市场检验。
+4. (1次) 智能眼镜被纳入2026国家补贴，预计2025中国市场销量将达137万副。
+   链接: https://www.aicpb.com/news/iframe?world=根据以下信息搜集全网最新资料，并解读。信息：智能眼镜被纳入2026国家补贴，预计2025中国市场销量将达137万副。
+5. (1次) 通义千问开源图像生成模型Qwen-Image-2512，满足专业设计多样化需求。
+   链接: https://www.aicpb.com/news/iframe?world=根据以下信息搜集全网最新资料，并解读。信息：通义千问开源图像生成模型Qwen-Image-2512，满足专业设计多样化需求。
+
+【Google AI Blog Top5】
+1. (1次) AutoBNN: Probabilistic time series forecasting with compositional bayesian neural networks
+   链接: http://blog.research.google/2024/03/autobnn-probabilistic-time-series.html
+2. (1次) Computer-aided diagnosis for lung cancer screening
+   链接: http://blog.research.google/2024/03/computer-aided-diagnosis-for-lung.html
+3. (1次) Generative AI to quantify uncertainty in weather forecasting
+   链接: http://blog.research.google/2024/03/generative-ai-to-quantify-uncertainty.html
+4. (1次) SCIN: A new resource for representative dermatology images
+   链接: http://blog.research.google/2024/03/scin-new-resource-for-representative.html
+5. (1次) ScreenAI: A visual language model for UI and visually-situated language understanding
+   链接: http://blog.research.google/2024/03/screenai-visual-language-model-for-ui.html
+
+【MIT Technology Review Top5】
+1. (1次) A reality check on the AI jobs hysteria
+   链接: https://www.technologyreview.com/2026/05/26/1137855/a-reality-check-on-the-ai-jobs-hysteria/
+2. (1次) Google I/O showed how the path for AI-driven science is shifting
+   链接: https://www.technologyreview.com/2026/05/22/1137813/google-i-o-showed-how-the-path-for-ai-science-is-shifting/
+3. (1次) It’s time to address the looming crisis in entry-level work.
+   链接: https://www.technologyreview.com/2026/05/26/1137865/its-time-to-address-the-looming-crisis-in-entry-level-work/
+4. (1次) Rethinking organizational design in the age of agentic AI
+   链接: https://www.technologyreview.com/2026/05/26/1137584/rethinking-organizational-design-in-the-age-of-agentic-ai/
+5. (1次) The Download: coding’s future, the ‘Steroid Olympics,’ and AI-driven science
+   链接: https://www.technologyreview.com/2026/05/22/1137845/the-download-coding-future-steroid-olympics-ai-science/
+
+【CSDN博客 Top5】
+1. (1次) 《智能终端与边缘计算》第八章 智能终端与边缘计算应用与案例分析（实时语音识别、图像处理与计算机视觉、推荐系统）
+   链接: https://blog.csdn.net/fcc13461862452/article/details/161415162
+2. (1次) 基于YOLO的牲畜检测与计数系统～Python+深度学习+YOLOV8算法+人工智能+目标检测+图像识别
+   链接: https://blog.csdn.net/meridian002/article/details/161429986
+3. (1次) 深度学习序列建模（三）—— LSTM 与 GRU 门控机制（四十五）
+   链接: https://blog.csdn.net/weixin_43114209/article/details/161423511
+4. (1次) 第03课：AI的“大脑“是怎么工作的？——机器学习、深度学习一网打尽
+   链接: https://blog.csdn.net/syc000666/article/details/161430214
+5. (1次) 第九章 集成学习 Boosting案例：信用卡欺诈分类
+   链接: https://blog.csdn.net/weixin_44723899/article/details/161430243
+
+【超神经 Top5】
+1. (1次) ChatGPT 坐拥亿级用户但付费率不足 10%，AI 如何转化持久利润？
+   链接: https://orion.hyper.ai/news/48636
+2. (1次) 在线教程｜ 腾讯混元开源端侧翻译工具 HY-MT1.5，1.8B 模型仅需 1G 内存
+   链接: https://orion.hyper.ai/news/48589
+3. (1次) 完整回放｜上海创智/TileAI/华为/先进编译实验室/AI9Stars 深度拆解 AI 编译器技术实践
+   链接: https://orion.hyper.ai/news/48573
+4. (1次) 实现高选择性底物设计，MIT 联手哈佛用生成式 AI 发现全新蛋白酶切割模式
+   链接: https://orion.hyper.ai/news/48608
+5. (1次) 揭秘 AI 推理：OpenAI 稀疏模型让神经网络首次透明化；Calories Burnt Prediction：为健身模型注入精准能量数据
+   链接: https://orion.hyper.ai/news/48667
+
+【全站综合 Top5】
+1. (2次) [MIT Technology Review] A reality check on the AI jobs hysteria
+   链接: https://www.technologyreview.com/2026/05/26/1137855/a-reality-check-on-the-ai-jobs-hysteria/
+2. (2次) [MIT Technology Review] Google I/O showed how the path for AI-driven science is shifting
+   链接: https://www.technologyreview.com/2026/05/22/1137813/google-i-o-showed-how-the-path-for-ai-science-is-shifting/
+3. (2次) [MIT Technology Review] It’s time to address the looming crisis in entry-level work.
+   链接: https://www.technologyreview.com/2026/05/26/1137865/its-time-to-address-the-looming-crisis-in-entry-level-work/
+4. (2次) [MIT Technology Review] Rethinking organizational design in the age of agentic AI
+   链接: https://www.technologyreview.com/2026/05/26/1137584/rethinking-organizational-design-in-the-age-of-agentic-ai/
+5. (2次) [MIT Technology Review] The Download: coding’s future, the ‘Steroid Olympics,’ and AI-driven science
+   链接: https://www.technologyreview.com/2026/05/22/1137845/the-download-coding-future-steroid-olympics-ai-science/
+==================================================
+==================================================
+报告类型: 晨间报告 (08:30)
+分类: AI
+报告时间: 2026-05-27 08:30:00
+统计窗口: 2026-05-26 18:30:00 ~ 2026-05-27 08:30:00 (14小时)
+采集轮次: 0 次
+
+【掘金 Top5】
+（暂无数据）
+
+【量子位 Top5】
+（暂无数据）
+
+【AIbase Top5】
+（暂无数据）
+
+【产品经理的人工智能学习库 Top5】
+（暂无数据）
+
+【MIT Technology Review Top5】
+（暂无数据）
+
+【AI工具集 Top5】
+（暂无数据）
+
+【36氪 Top5】
+（暂无数据）
+
+【AI产品榜 Top5】
+（暂无数据）
+
+【Google AI Blog Top5】
+（暂无数据）
+
+【MIT Technology Review Top5】
+（暂无数据）
+
+【CSDN博客 Top5】
+（暂无数据）
+
+【超神经 Top5】
+（暂无数据）
+
+【全站综合 Top5】
+（暂无数据）
+==================================================
