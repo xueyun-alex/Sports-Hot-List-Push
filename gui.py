@@ -1,4 +1,6 @@
 import logging
+import os
+import sys
 import threading
 import tkinter as tk
 import webbrowser
@@ -28,6 +30,11 @@ PLATFORM_LAYOUT = [
 TIME_RANGE_OPTIONS = ("今天", "最近24小时", "最近7天", "全部")
 FETCH_LIMIT = 500
 COUNT_FETCH_LIMIT = 100
+
+
+def _resource_path(relative_path: str) -> str:
+    base_dir = getattr(sys, "_MEIPASS", os.path.abspath(os.path.dirname(__file__)))
+    return os.path.join(base_dir, relative_path)
 
 
 def _platform_display_name(platform_key: str) -> str:
@@ -521,6 +528,10 @@ class HotListApp:
         self.root.title("体育热榜监控")
         self.root.minsize(900, 620)
         self.root.geometry("960x680")
+
+        icon_path = _resource_path("telegram.ico")
+        if os.path.exists(icon_path):
+            self.root.iconbitmap(icon_path)
 
         style = ttk.Style()
         if "vista" in style.theme_names():

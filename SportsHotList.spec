@@ -12,7 +12,7 @@ hiddenimports = [
     "apscheduler.executors.pool",
 ]
 
-datas = [(certifi.where(), "certifi")]
+datas = [(certifi.where(), "certifi"), ("telegram.ico", ".")]
 binaries = []
 
 tzdata_datas, tzdata_binaries, tzdata_hiddenimports = collect_all("tzdata")
@@ -57,4 +57,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon="telegram.ico",
 )
