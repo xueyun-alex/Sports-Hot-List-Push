@@ -7,7 +7,6 @@ venv/
 .env
 .env.example
 .gitignore
-.cursor/plans
 build/
 dist/
 *.spec.bak

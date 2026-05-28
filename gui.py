@@ -18,7 +18,8 @@ from config import (
     RETENTION_DAYS,
 )
 from monitor import HotListMonitor
-from pushplus import send_test_message
+from config import PUSHPLUS_CMD_ENABLED
+from pushplus import check_open_api_access, send_test_message
 from scraper import HotItem
 from storage import AppearanceRecord, CountResult, Storage
 from timezone_utils import get_tz
@@ -1056,6 +1057,10 @@ class HotListApp:
 
     def run(self) -> None:
         self._set_polling_status()
+        if PUSHPLUS_CMD_ENABLED:
+            ok, detail = check_open_api_access()
+            if not ok:
+                self.status_var.set(f"状态：微信指令不可用 — {detail}")
         threading.Thread(target=self.monitor.start, daemon=True).start()
         self.root.mainloop()
 

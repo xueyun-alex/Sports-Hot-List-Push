@@ -1,8 +1,9 @@
 import logging
+import re
 import threading
 import time
 from datetime import datetime, timedelta
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import requests
 
@@ -10,6 +11,7 @@ from config import (
     PUSHPLUS_ACCESS_KEY_URL,
     PUSHPLUS_API_URL,
     PUSHPLUS_CHANNEL,
+    PUSHPLUS_CLAWBOT_MSG_URL,
     PUSHPLUS_ENABLED,
     PUSHPLUS_PUSH_MAX_RETRIES,
     PUSHPLUS_RETRY_DELAY,
@@ -19,6 +21,7 @@ from config import (
     PUSHPLUS_VERIFY_ENABLED,
     PUSHPLUS_VERIFY_POLL_INTERVAL,
     PUSHPLUS_VERIFY_TIMEOUT,
+    REPORT_COMMAND_TEXT,
 )
 from timezone_utils import get_tz
 
@@ -36,6 +39,96 @@ _access_key_unavailable = False
 
 def is_delivery_verify_available() -> bool:
     return PUSHPLUS_VERIFY_ENABLED and not _access_key_unavailable
+
+
+def is_clawbot_inbound_available() -> bool:
+    return not _access_key_unavailable
+
+
+def check_open_api_access(
+    session: Optional[requests.Session] = None,
+) -> Tuple[bool, str]:
+    """Verify AccessKey works (required for ClawBot getMsg and delivery verify)."""
+    if not PUSHPLUS_SECRET_KEY:
+        return False, "未配置 PUSHPLUS_SECRET_KEY，无法读取微信指令"
+    if not PUSHPLUS_TOKEN:
+        return False, "未配置 PUSHPLUS_TOKEN"
+
+    global _access_key_unavailable
+    prev_unavailable = _access_key_unavailable
+    _access_key_unavailable = False
+    access_key = get_access_key(session=session)
+    if access_key:
+        return True, "开放接口可用，微信指令监听已就绪"
+    if _access_key_unavailable or prev_unavailable:
+        return (
+            False,
+            "PushPlus 开放接口未授权：请在个人中心→开发设置启用开放接口，"
+            "核对 SecretKey 与 .env 一致，并将本机公网 IP 加入白名单",
+        )
+    return False, "无法获取 PushPlus AccessKey，请检查网络或稍后重试"
+
+
+def normalize_command_text(text: str) -> str:
+    return re.sub(r"\s+", "", (text or "").strip())
+
+
+def is_report_command(text: str) -> bool:
+    normalized = normalize_command_text(text)
+    if not normalized:
+        return False
+    primary = normalize_command_text(REPORT_COMMAND_TEXT)
+    if normalized == primary:
+        return True
+    if primary.endswith("吧") and normalized == primary[:-1]:
+        return True
+    return normalized == "开始汇报"
+
+
+def fetch_clawbot_inbound_messages(
+    session: Optional[requests.Session] = None,
+) -> List[dict]:
+    """Fetch user messages sent to ClawBot. Returns items with type and text."""
+    access_key = get_access_key(session=session)
+    if not access_key:
+        if not is_clawbot_inbound_available():
+            logger.debug(
+                "ClawBot getMsg skipped: open API access key unavailable"
+            )
+        return []
+
+    result = _get_json(
+        PUSHPLUS_CLAWBOT_MSG_URL,
+        session=session,
+        headers={"access-key": access_key},
+    )
+    if not result:
+        return []
+
+    code = result.get("code")
+    if code != 200:
+        logger.warning(
+            "PushPlus clawbot getMsg failed (code=%s): %s",
+            code,
+            result.get("msg", result),
+        )
+        return []
+
+    messages = []
+    for item in result.get("data") or []:
+        if not isinstance(item, dict):
+            continue
+        msg_type = item.get("type")
+        try:
+            msg_type = int(msg_type)
+        except (TypeError, ValueError):
+            continue
+        if msg_type != 1:
+            continue
+        text = (item.get("text") or "").strip()
+        if text:
+            messages.append({"type": msg_type, "text": text})
+    return messages
 
 
 def build_push_title(prefix: str, report_label: str, content: str) -> str:

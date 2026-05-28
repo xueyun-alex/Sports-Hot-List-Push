@@ -131,3 +131,22 @@ PUSHPLUS_VERIFY_TIMEOUT = max(
 PUSHPLUS_RETRY_DELAY = max(
     1, int(os.getenv("PUSHPLUS_RETRY_DELAY", "10"))
 )
+PUSHPLUS_CLAWBOT_MSG_URL = os.getenv(
+    "PUSHPLUS_CLAWBOT_MSG_URL",
+    "https://www.pushplus.plus/api/open/clawBot/getMsg",
+).strip()
+REPORT_COMMAND_TEXT = os.getenv("REPORT_COMMAND_TEXT", "开始汇报吧").strip()
+PUSHPLUS_CMD_POLL_SECONDS = max(
+    5, int(os.getenv("PUSHPLUS_CMD_POLL_SECONDS", "20"))
+)
+_cmd_enabled = os.getenv("PUSHPLUS_CMD_ENABLED", "").strip().lower()
+if _cmd_enabled in ("0", "false", "no"):
+    PUSHPLUS_CMD_ENABLED = False
+elif _cmd_enabled in ("1", "true", "yes"):
+    PUSHPLUS_CMD_ENABLED = True
+else:
+    PUSHPLUS_CMD_ENABLED = bool(
+        PUSHPLUS_ENABLED
+        and PUSHPLUS_SECRET_KEY
+        and PUSHPLUS_CHANNEL == "clawbot"
+    )

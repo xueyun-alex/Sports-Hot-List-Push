@@ -57,8 +57,31 @@ $env:PUSHPLUS_CHANNEL="clawbot"
 | `PUSHPLUS_VERIFY_POLL_INTERVAL` | `5` | 轮询间隔（秒） |
 | `PUSHPLUS_VERIFY_TIMEOUT` | `90` | 单次发送后轮询最长等待（秒） |
 | `PUSHPLUS_RETRY_DELAY` | `10` | 重发前等待（秒） |
+| `PUSHPLUS_CMD_POLL_SECONDS` | `20` | 轮询微信 ClawBot 入站指令的间隔（秒） |
+| `PUSHPLUS_CMD_ENABLED` | 有 Token + SecretKey 且 channel=clawbot 时为 true | 设为 `0` 可关闭指令轮询 |
+| `REPORT_COMMAND_TEXT` | `开始汇报吧` | 触发重发落盘简报的指令文案 |
 
 投递状态 `status=2` 表示 PushPlus 已成功投递到 ClawBot/微信，不代表用户已阅读消息。若账号启用了开放接口 IP 白名单，需将运行机器 IP 加入白名单。
+
+### 微信指令重发落盘简报
+
+程序常驻运行且已配置 **`PUSHPLUS_SECRET_KEY`** 时，会每 20 秒（可用 `PUSHPLUS_CMD_POLL_SECONDS` 调整）轮询 PushPlus「获取发送消息」接口。
+
+在微信里向 **ClawBot** 发送 **`开始汇报吧`**（也兼容 `开始汇报`）后，将从落盘文件读取**各自最新一块**简报并**分 2 条**重发到微信：
+
+- `data/hotlist_report.txt` → 体育整份简报
+- `data/ai_hotlist_report.txt` → AI 整份简报
+
+标题会带 `(手动重发)` 后缀，与 08:30 / 18:30 定时推送区分。若某分类尚无落盘报告，则跳过该条并写日志。
+
+**说明：**
+
+- 必须配置 `PUSHPLUS_SECRET_KEY`（与投递验证相同），否则无法拉取入站消息。
+- 除填写密钥外，还需在 PushPlus **个人中心 → 开发设置** 中**启用开放接口**，并将运行程序的**公网 IP** 加入白名单；仅配置 Token 可正常推送，但无法识别「开始汇报吧」等微信指令（AccessKey 会返回 401）。
+- 启动后若开放接口异常，日志会出现 `ClawBot command polling will not work`；GUI 状态栏也会提示「微信指令不可用」。
+- 优先重发磁盘最新块；若尚无落盘报告（例如未到 08:30 / 18:30），则按当前统计窗口**即时生成**并推送（标题带 `(即时生成)`）。
+- 入站消息通过快照差分去重；若 PushPlus 长期返回同一条历史消息，重复发送相同指令可能不会再次触发（可稍改文案或联系 PushPlus 行为）。
+- 出站重发仍受 ClawBot「每 10 条 / 24 小时需主动对话」限制。
 
 程序启动时会自动读取同目录下的 `.env`（已存在的环境变量不会被覆盖）。
 

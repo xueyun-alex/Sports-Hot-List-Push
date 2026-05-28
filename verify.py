@@ -7,7 +7,12 @@ from datetime import datetime
 from typing import Tuple
 
 from config import CATEGORIES, CATEGORY_AI, CATEGORY_SPORTS, DATA_DIR, PLATFORMS
-from reporter import generate_evening_report, generate_morning_report
+from reporter import (
+    generate_evening_report,
+    generate_morning_report,
+    parse_report_metadata,
+    read_latest_report_block,
+)
 from scraper import HotItem, fetch_ai_category_modules, fetch_all_platforms
 from storage import Storage, evening_report_window, morning_report_window
 from timezone_utils import get_tz
@@ -151,6 +156,32 @@ def test_poll_and_report(use_live_fetch: bool = True) -> Tuple[str, str]:
     return evening_sports, evening_ai
 
 
+def test_read_latest_report_block() -> None:
+    test_sports_report = DATA_DIR / "test_hotlist_report.txt"
+    test_ai_report = DATA_DIR / "test_ai_hotlist_report.txt"
+    if not test_sports_report.is_file() or not test_ai_report.is_file():
+        raise RuntimeError(
+            "test_read_latest_report_block requires test_poll_and_report output"
+        )
+
+    sports_block = read_latest_report_block(test_sports_report)
+    ai_block = read_latest_report_block(test_ai_report)
+    assert sports_block is not None
+    assert ai_block is not None
+    assert "报告类型:" in sports_block
+    assert "分类: AI" in ai_block
+
+    sports_type, sports_cat = parse_report_metadata(sports_block)
+    ai_type, ai_cat = parse_report_metadata(ai_block)
+    assert "晨间报告" in sports_type
+    assert sports_cat == "体育"
+    assert "晨间报告" in ai_type
+    assert ai_cat == "AI"
+
+    assert read_latest_report_block(DATA_DIR / "nonexistent_report.txt") is None
+    logger.info("read_latest_report_block OK")
+
+
 def test_push(evening_report: str, prefix: str) -> None:
     from pushplus import build_push_title, send_report
 
@@ -178,6 +209,7 @@ def main() -> int:
     evening_sports, evening_ai = test_poll_and_report(
         use_live_fetch=not args.no_live_fetch
     )
+    test_read_latest_report_block()
     if args.push:
         test_push(evening_sports, CATEGORIES[CATEGORY_SPORTS]["push_prefix"])
         test_push(evening_ai, CATEGORIES[CATEGORY_AI]["push_prefix"])

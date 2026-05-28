@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from config import CATEGORIES, PLATFORMS, TOP_N_REPORT
+
+REPORT_BLOCK_SEPARATOR = "=" * 50
 from storage import CountResult, Storage, evening_report_window, morning_report_window
 from timezone_utils import get_tz
 
@@ -101,6 +103,38 @@ def build_report(
     sections.append("=" * 50)
     sections.append("")
     return "\n".join(sections)
+
+
+def parse_report_metadata(content: str) -> Tuple[str, str]:
+    """Return (report_type_label, category_label) from a report block."""
+    report_type = ""
+    category_label = ""
+    for line in content.splitlines():
+        if line.startswith("报告类型:"):
+            report_type = line.split(":", 1)[1].strip()
+        elif line.startswith("分类:"):
+            category_label = line.split(":", 1)[1].strip()
+        if report_type and category_label:
+            break
+    return report_type, category_label
+
+
+def read_latest_report_block(report_file: Path) -> Optional[str]:
+    if not report_file.is_file():
+        return None
+
+    raw = report_file.read_text(encoding="utf-8")
+    if not raw.strip():
+        return None
+
+    blocks = raw.split(REPORT_BLOCK_SEPARATOR)
+    for block in reversed(blocks):
+        block = block.strip()
+        if not block or "报告类型:" not in block:
+            continue
+        return f"{REPORT_BLOCK_SEPARATOR}\n{block}\n{REPORT_BLOCK_SEPARATOR}\n"
+
+    return None
 
 
 def write_report(content: str, report_file: Optional[Path] = None) -> None:
