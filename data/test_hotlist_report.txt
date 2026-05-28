@@ -6,34 +6,84 @@
 采集轮次: 1 次
 
 【新浪体育新闻 Top5】
-1. (1次) 测试条目A
-   链接: https://example.com/a
-2. (1次) 测试条目B
-   链接: https://example.com/b
+1. (1次) 2026美加墨世界杯赛制大变样 新规全面解读
+   链接: http://sports.sina.com.cn/l/2026-05-28/doc-inhzmayu7893656.shtml
+---
+2. (1次) 双色球超罕见形态历史首现!下期1走势仍延续?
+   链接: https://sports.sina.com.cn/l/2026-05-27/doc-inhzhxzw0963176.shtml
+---
+3. (1次) 哈利伯顿：确实有教练专门教球员假摔 造犯规已成为比赛一部分
+   链接: https://sports.sina.com.cn/basketball/nba/2026-05-28/doc-inhzmayw8717383.shtml
+---
+4. (1次) 帕森斯：西决裁判漏吹明显干扰球太离谱了 但漏判这种事一直存在
+   链接: https://sports.sina.com.cn/basketball/nba/2026-05-28/doc-inhzkwsy8820665.shtml
+---
+5. (1次) 弗莱：米切尔不是能带队进总决赛头号球星 他和莫布里得送走一个
+   链接: https://sports.sina.com.cn/basketball/nba/2026-05-28/doc-inhzkwsy8818713.shtml
 
 【抖音体育榜 Top5】
-1. (1次) 测试条目A
-   链接: https://example.com/a
-2. (1次) 测试条目B
-   链接: https://example.com/b
+1. (1次) 18岁小将严子怡逆天一枪太炸裂了，创造标枪历史第二好成绩的她喜极而泣，中国田径又出了一位大魔王！#严子怡
+   链接: https://www.douyin.com/video/7644478272890293503
+---
+2. (1次) “王哲林五尬球还是来了”#篮球🏀 #篮球摄手虎 #王哲林 #CBA总决赛 #CBA季后赛以城之名
+   链接: https://www.douyin.com/video/7644199776141375205
+---
+3. (1次) 中年女性不建议过渡减肥，你怎么看#成为更好的自己 #健康运动 #爱跑步的真姐#你的坚持终将美好#奔跑吧运动女孩
+   链接: https://www.douyin.com/video/7644205263252145125
+---
+4. (1次) 像我吗？ 妈妈的五岁～练习体操 女儿的五岁～开始体操比赛 #体操 #幼儿体操 #运动 #奥运冠军 #奖牌
+   链接: https://www.douyin.com/video/7644130263057206257
+---
+5. (1次) 哈哈哈哈 没想到啊
+   链接: https://www.douyin.com/video/7644350933211642801
 
 【虎扑NBA热帖 Top5】
-1. (1次) 测试条目A
-   链接: https://example.com/a
-2. (1次) 测试条目B
-   链接: https://example.com/b
+1. (1次) [流言板]Skip：文班亚马逃避了媒体采访，完全就是不承担责任的表现
+   链接: https://bbs.hupu.com/639572928.html
+---
+2. (1次) [流言板]帕森斯：文班近期的动作过大，再这样就和狄龙、追梦一样了
+   链接: https://bbs.hupu.com/639573479.html
+---
+3. (1次) [流言板]本赛季托尼兄弟执裁雷霆比赛时，雷霆未尝一败
+   链接: https://bbs.hupu.com/639573704.html
+---
+4. (1次) [流言板]杰弗森：任何时候我都宁愿去防文班亚马，也绝不想去防库里
+   链接: https://bbs.hupu.com/639572940.html
+---
+5. (1次) [流言板]杰弗森：说SGA是假摔王的都在带节奏，他去掉罚球后依旧很强
+   链接: https://bbs.hupu.com/639572855.html
 
 【懂球帝今日头条 Top5】
-1. (1次) 测试条目A
-   链接: https://example.com/a
-2. (1次) 测试条目B
-   链接: https://example.com/b
+1. (1次) 5.28今日竞足看点
+   链接: https://www.dongqiudi.com/article/5879113
+---
+2. (1次) Here we go！罗马诺：安东尼-戈登超8000万欧加盟巴萨
+   链接: https://www.dongqiudi.com/article/5878593
+---
+3. (1次) Here we go！罗马诺：罗伯逊即将自由转会加盟热刺
+   链接: https://www.dongqiudi.com/article/5878608
+---
+4. (1次) 乔伟光：从中乙打回中超，我一生引以为荣，没给青岛丢人
+   链接: https://www.dongqiudi.com/article/5879085
+---
+5. (1次) 尼昂：外界没帮莱奥，他需要帮助
+   链接: https://www.dongqiudi.com/article/5879091
 
 【全站综合 Top5】
-1. (4次) [懂球帝今日头条] 测试条目A
-   链接: https://example.com/a
-2. (4次) [懂球帝今日头条] 测试条目B
-   链接: https://example.com/b
+1. (1次) [抖音体育榜] 18岁小将严子怡逆天一枪太炸裂了，创造标枪历史第二好成绩的她喜极而泣，中国田径又出了一位大魔王！#严子怡
+   链接: https://www.douyin.com/video/7644478272890293503
+---
+2. (1次) [新浪体育新闻] 2026美加墨世界杯赛制大变样 新规全面解读
+   链接: http://sports.sina.com.cn/l/2026-05-28/doc-inhzmayu7893656.shtml
+---
+3. (1次) [懂球帝今日头条] 5.28今日竞足看点
+   链接: https://www.dongqiudi.com/article/5879113
+---
+4. (1次) [懂球帝今日头条] Here we go！罗马诺：安东尼-戈登超8000万欧加盟巴萨
+   链接: https://www.dongqiudi.com/article/5878593
+---
+5. (1次) [懂球帝今日头条] Here we go！罗马诺：罗伯逊即将自由转会加盟热刺
+   链接: https://www.dongqiudi.com/article/5878608
 ==================================================
 ==================================================
 报告类型: 晨间报告 (08:30)

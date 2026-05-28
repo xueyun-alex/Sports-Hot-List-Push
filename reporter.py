@@ -33,8 +33,10 @@ def _format_item_line(
         if show_platform
         else ""
     )
-    url_part = f"\n   链接: {item.url}" if item.url else ""
-    return f"{index}. ({item.count}次) {platform_tag}{item.title}{url_part}"
+    title_line = f"{index}. ({item.count}次) {platform_tag}{item.title}"
+    if item.url:
+        return f"链接: {item.url}\n{title_line}"
+    return title_line
 
 
 def _format_section(
@@ -48,10 +50,11 @@ def _format_section(
         lines.append("（暂无数据）")
         return "\n".join(lines)
 
-    for index, item in enumerate(items, start=1):
-        lines.append(
-            _format_item_line(index, item, platforms, show_platform=show_platform)
-        )
+    item_lines = [
+        _format_item_line(index, item, platforms, show_platform=show_platform)
+        for index, item in enumerate(items, start=1)
+    ]
+    lines.append("\n---\n".join(item_lines))
     return "\n".join(lines)
 
 
