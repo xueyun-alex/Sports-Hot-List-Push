@@ -46,7 +46,7 @@ def _resource_path(relative_path: str) -> str:
     return os.path.join(base_dir, relative_path)
 
 
-_APP_USER_MODEL_ID = "SportsHotList.Monitor.1"
+_APP_USER_MODEL_ID = "SportsHotList.Monitor.2"
 
 
 def _prepare_windows_taskbar_icon() -> None:
@@ -64,13 +64,12 @@ def _prepare_windows_taskbar_icon() -> None:
 
 
 def _apply_window_icon(root: tk.Tk) -> None:
-    icon_path = _resource_path("telegram.ico")
-    if not os.path.exists(icon_path):
-        return
-    try:
-        root.iconbitmap(default=icon_path)
-    except tk.TclError:
-        logger.debug("iconbitmap failed for %s", icon_path, exc_info=True)
+    ico_path = _resource_path("app_icon.ico")
+    if os.path.exists(ico_path):
+        try:
+            root.iconbitmap(default=ico_path)
+        except tk.TclError:
+            logger.debug("iconbitmap failed for %s", ico_path, exc_info=True)
 
 
 def _platform_display_name(platform_key: str, platforms: Dict[str, dict]) -> str:
