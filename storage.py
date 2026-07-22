@@ -38,6 +38,15 @@ class CountResult:
 
 
 @dataclass
+class TitleCountRecord:
+    platform: str
+    title: str
+    url: Optional[str]
+    count: int
+    last_seen: str
+
+
+@dataclass
 class AppearanceRecord:
     id: int
     platform: str
@@ -166,6 +175,46 @@ class Storage:
 
         return [
             CountResult(
+                platform=row["platform"],
+                title=row["title"],
+                url=row["url"],
+                count=row["count"],
+                last_seen=row["last_seen"],
+            )
+            for row in rows
+        ]
+
+    def fetch_title_counts(
+        self,
+        start: datetime,
+        end: datetime,
+        platform_key: Optional[str] = None,
+        category: str = CATEGORY_SPORTS,
+    ) -> List[TitleCountRecord]:
+        """Return title-level counts used by derived rankings such as people."""
+        params: List = [category, start.isoformat(), end.isoformat()]
+        platform_filter = ""
+        if platform_key:
+            platform_filter = "AND platform = ?"
+            params.append(platform_key)
+
+        query = f"""
+            SELECT
+                platform,
+                title,
+                url,
+                COUNT(*) AS count,
+                MAX(polled_at) AS last_seen
+            FROM appearances
+            WHERE category = ? AND polled_at >= ? AND polled_at <= ? {platform_filter}
+            GROUP BY platform, COALESCE(url, ''), title
+            ORDER BY last_seen DESC, title ASC
+        """
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+
+        return [
+            TitleCountRecord(
                 platform=row["platform"],
                 title=row["title"],
                 url=row["url"],
