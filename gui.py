@@ -650,6 +650,8 @@ class PersonCountPanel(ttk.Frame):
         self._loading = False
         self._loaded_once = False
         self._loaded_category: Optional[str] = None
+        self._sort_column = "count"
+        self._sort_descending = True
 
         filter_bar = ttk.Frame(self)
         filter_bar.pack(fill="x", pady=(0, 4))
@@ -711,8 +713,16 @@ class PersonCountPanel(ttk.Frame):
         self.tree.heading("rank", text="#")
         self.tree.heading("name", text="人名")
         self.tree.heading("platform", text="平台")
-        self.tree.heading("count", text="出现次数")
-        self.tree.heading("headline_count", text="相关标题")
+        self.tree.heading(
+            "count",
+            text="出现次数 ▼",
+            command=lambda: self._sort_person_tree("count"),
+        )
+        self.tree.heading(
+            "headline_count",
+            text="相关标题",
+            command=lambda: self._sort_person_tree("headline_count"),
+        )
         self.tree.heading("latest_title", text="最近标题")
         self.tree.heading("last_seen", text="最后出现")
         self.tree.column("rank", width=36, anchor="center", stretch=False)
@@ -844,6 +854,9 @@ class PersonCountPanel(ttk.Frame):
     ) -> None:
         self.tree.delete(*self.tree.get_children())
         self._url_map.clear()
+        self._sort_column = "count"
+        self._sort_descending = True
+        self._update_sort_headings()
 
         for index, item in enumerate(results, start=1):
             item_id = self.tree.insert(
@@ -878,6 +891,38 @@ class PersonCountPanel(ttk.Frame):
             )
 
         self._finish_loading()
+
+    def _sort_person_tree(self, column: str) -> None:
+        if self._sort_column == column:
+            self._sort_descending = not self._sort_descending
+        else:
+            self._sort_column = column
+            self._sort_descending = True
+
+        children = list(self.tree.get_children())
+        children.sort(
+            key=lambda item_id: int(self.tree.set(item_id, column) or 0),
+            reverse=self._sort_descending,
+        )
+        for rank, item_id in enumerate(children, start=1):
+            self.tree.move(item_id, "", rank - 1)
+            self.tree.set(item_id, "rank", rank)
+        self._update_sort_headings()
+
+    def _update_sort_headings(self) -> None:
+        labels = {
+            "count": "出现次数",
+            "headline_count": "相关标题",
+        }
+        for column, label in labels.items():
+            if column == self._sort_column:
+                arrow = "▼" if self._sort_descending else "▲"
+                label = f"{label} {arrow}"
+            self.tree.heading(
+                column,
+                text=label,
+                command=lambda selected=column: self._sort_person_tree(selected),
+            )
 
     def _apply_error(self) -> None:
         self.tree.delete(*self.tree.get_children())
